@@ -1,12 +1,11 @@
-
 import 'api_client.dart';
 
 class ContentService {
   final ApiClient _client = ApiClient();
 
-  Future<List<dynamic>> fetchVerifiedGurus() async {
-    final response = await _client.get('verified-guru');
-    return response['data'] ?? [];
+  Future<List<dynamic>> fetchAllGurus() async {
+    final response = await _client.get('guru-list');
+    return List<dynamic>.from(response);
   }
 
   Future<List<dynamic>> fetchOnlinePujas() async {
@@ -37,21 +36,43 @@ class ContentService {
     return await _client.get('guru-details/$slug');
   }
 
+  // =========================
+  // Categories
+  // =========================
+
  Future<List<dynamic>> fetchTopDecorations() async {
-    final response = await _client.get(
-      'service-details/decoration',
-    );
+  final response = await _client.get('categories/decoration');
 
-    return response['service'] ?? [];
+  if (response is Map<String, dynamic>) {
+    final data = response['data'];
+
+    if (data is Map<String, dynamic>) {
+      final services = data['services'];
+
+      if (services is List) {
+        return List<dynamic>.from(services);
+      }
+    }
   }
 
-  // Popular Venues
-  Future<List<dynamic>> fetchPopularVenues() async {
-    final response = await _client.get(
-      'service-details/venue',
-    );
+  return [];
+}
 
-    return response['service'] ?? [];
+ Future<List<dynamic>> fetchPopularVenues() async {
+  final response = await _client.get('categories/venue');
+
+  final data = response['data'];
+
+  if (data == null || data['services'] == null) {
+    return [];
   }
 
+  return data['services'];
+}
+  Future<dynamic> servicesDetails(String slug) async {
+    return await _client.get('categories/$slug');
+  }
+  Future<dynamic> serviceDetails(String slug) async {
+    return await _client.get('service-details/$slug');
+  }
 }

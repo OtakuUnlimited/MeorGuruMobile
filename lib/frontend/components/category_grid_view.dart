@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../constants.dart';
 import '../../backend/services/content_services.dart';
+import '../../routes/app_routes.dart';
 
 class CategoryGridView extends StatefulWidget {
   final int crossAxisCount;
@@ -122,18 +123,14 @@ class _CategoryGridViewState extends State<CategoryGridView> {
 
     return GestureDetector(
       onTap: () {
-        if (widget.onCategoryTap != null) {
-          widget.onCategoryTap!(category);
-        } else {
           Navigator.pushNamed(
             context,
-            '/services-by-category',
+            AppRoutes.services,
             arguments: {
               'slug': slug,
               'title': title,
             },
           );
-        }
       },
 
       child: Container(

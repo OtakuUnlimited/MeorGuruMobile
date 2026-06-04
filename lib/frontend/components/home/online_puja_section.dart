@@ -11,7 +11,6 @@ class OnlinePujaSection extends StatelessWidget {
     return FutureBuilder(
       future: ContentService().fetchOnlinePujas(),
       builder: (context, snapshot) {
-
         if (!snapshot.hasData) {
           return const Center(
             child: CircularProgressIndicator(),
@@ -20,13 +19,55 @@ class OnlinePujaSection extends StatelessWidget {
 
         final pujas = snapshot.data!;
 
+        // Show max 5 pujas + 1 See More card
+        final displayCount = pujas.length > 5 ? 6 : pujas.length;
+
         return SizedBox(
           height: 190,
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            itemCount: pujas.length,
+            itemCount: displayCount,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             itemBuilder: (context, index) {
+
+              // Last card = See More
+              if (pujas.length > 5 && index == 5) {
+                return Container(
+                  width: 150,
+                  margin: const EdgeInsets.only(right: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade50,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(
+                      color: Colors.orange,
+                    ),
+                  ),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(18),
+                    onTap: () {
+                      // Navigate to full puja list page
+                    },
+                    child: const Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.arrow_forward_ios,
+                          size: 30,
+                          color: Colors.orange,
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          "See More",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
 
               final puja = pujas[index];
 

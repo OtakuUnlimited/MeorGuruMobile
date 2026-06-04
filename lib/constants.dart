@@ -14,22 +14,29 @@ Widget buildOutlineTextField(
   String label,
   String hint, {
   bool isObscure = false,
+  TextEditingController? controller,
 }) {
   return TextField(
+    controller: controller,
     obscureText: isObscure,
     decoration: InputDecoration(
       labelText: label,
       labelStyle: const TextStyle(color: Colors.black54),
       hintText: hint,
       floatingLabelBehavior: FloatingLabelBehavior.always,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: 20,
+        vertical: 16,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(25),
-        borderSide: const BorderSide(color: Colors.black26),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(25),
-        borderSide: const BorderSide(color: AppColors.orangeMain, width: 2),
+        borderSide: const BorderSide(
+          color: AppColors.orangeMain,
+          width: 2,
+        ),
       ),
     ),
   );

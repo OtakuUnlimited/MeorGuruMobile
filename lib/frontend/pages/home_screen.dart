@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../constants.dart';
 import '../components/top_nav_bar.dart';
 import '../components/bottom_nav_bar.dart';
+import '../../routes/app_routes.dart';
 
 import '../components/home/hero_banner.dart';
 import '../components/home/section_header.dart';
@@ -34,29 +35,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: "Mero Guru",
         style: NavBarStyle.BrandedLight,
         showMenu: true,
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.shopping_cart,
-              color: Colors.black,
-            ),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.account_circle,
-              color: Colors.black,
-            ),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const LoginScreen(),
-                ),
-              );
-            },
-          ),
-        ],
+        showProfile: true,
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -81,6 +60,12 @@ class _HomeScreenState extends State<HomeScreen> {
             /// ONLINE PUJA
             SectionHeader(
               title: "Online Puja Services",
+              onViewAll: () {
+                Navigator.pushNamed(
+                  context,
+                  '/decoration-services',
+                );
+              },
             ),
 
             OnlinePujaSection(),
@@ -90,6 +75,12 @@ class _HomeScreenState extends State<HomeScreen> {
             /// VERIFIED GURUS
             SectionHeader(
               title: "Our Verified Gurus",
+              onViewAll: () {
+                Navigator.pushNamed(
+                  context,
+                  '/guru',
+                );
+              },
             ),
 
             VerifiedGuruSection(),
@@ -108,7 +99,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
             TopDecorationSection(),
 
-            SizedBox(height: 20),
+            SizedBox(height: 25),
 
             SectionHeader(
               title: "Popular Venues",
@@ -121,6 +112,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             PopularVenuesSection(),
+
+            SizedBox(height: 20),
 
             /// BLOGS
             SectionHeader(
