@@ -4,10 +4,16 @@ import '../frontend/pages/home_screen.dart';
 import '../frontend/pages/login_screen.dart';
 import '../frontend/pages/register_screen.dart';
 import '../frontend/pages/profile_screen.dart';
+import '../frontend/pages/setting_screen.dart';
 // import '../frontend/pages/decoration_services_screen.dart';
 import '../frontend/pages/find_gurus_screen.dart';
 import '../frontend/pages/services_details_screen.dart';
 import '../frontend/pages/services_page_screen.dart';
+import '../frontend/pages/otp_verification_screen.dart';
+import '../frontend/pages/basic_details_screen.dart';
+
+
+
 
 // New E-Commerce Page Imports
 import '../frontend/pages/shop_screen.dart';
@@ -15,14 +21,30 @@ import '../frontend/pages/item_detail_screen.dart';
 import '../frontend/pages/cart_screen.dart';
 import '../frontend/pages/checkout_screen.dart';
 
+import '../frontend/pages/booking_screen.dart';
+
+import '../frontend/pages/online_puja_screen.dart';
+import '../frontend/pages/online_puja_detail_screen.dart';
+//import '../frontend/pages/online_puja_order_screen.dart';
+
+import '../frontend/pages/astrology_screen.dart';
+import '../frontend/pages/astrology_detail_screen.dart';
+import '../frontend/pages/astrology_order_screen.dart'; 
+
 class AppRoutes {
   static const home = '/';
   static const login = '/login';
   static const register = '/register';
   static const profile = '/profile';
+  static const settings = '/settings';
   // static const decorationServices = '/decoration-services';
   static const guru = '/guru';
+  static const otpVerification = '/otp-verification';
+  static const basicDetails = '/basic-details';
 
+  static const String astrology = '/astrology';
+  static const String astrologyDetail = '/astrology-detail';
+  static const String astrologyOrder = '/astrology-order';
   // New E-Commerce Named Route Strings
   static const shop = '/shop';
   static const itemDetail = '/item-detail';
@@ -30,9 +52,35 @@ class AppRoutes {
   static const checkout = '/checkout';
   static const serviceDetails = '/service-details';
   static const services = '/services';
+  static const String bookings = '/bookings';
   
+  static const String onlinePuja = '/online-puja';
+  static const String onlinePujaDetail = '/online-puja-detail';
+
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
   switch (settings.name) {
+    case astrologyDetail:
+      final slug = settings.arguments as String;
+
+      return MaterialPageRoute(
+        builder: (_) => AstrologyDetailScreen(slug: slug),
+      );
+
+    case onlinePujaDetail:
+      final slug = settings.arguments as String;
+
+      return MaterialPageRoute(
+        builder: (_) => OnlinePujaDetailScreen(slug: slug),
+      );
+
+    case astrologyOrder:
+    final args = settings.arguments as Map<String, dynamic>;
+
+      return MaterialPageRoute(
+        builder: (_) => AstrologyOrderScreen(
+          astrologyData: args,
+        ),
+      );
 
     case serviceDetails:
       final slug = settings.arguments as String;
@@ -53,6 +101,27 @@ class AppRoutes {
         ),
       );
 
+      case otpVerification:
+      final args =
+          settings.arguments as Map<String, dynamic>;
+
+      return MaterialPageRoute(
+        builder: (_) => OtpVerificationScreen(
+          userId: args['userId'],
+          email: args['email'],
+        ),
+      );
+
+    case basicDetails:
+      final userId = settings.arguments as int;
+
+      return MaterialPageRoute(
+        builder: (_) => BasicDetailsScreen(
+          userId: userId,
+        ),
+      );
+
+
     default:
       return null;
   }
@@ -63,10 +132,13 @@ class AppRoutes {
     login: (_) => const LoginScreen(),
     register: (_) => const RegisterScreen(),
     profile: (_) => const ProfileScreen(),
+    settings: (_) => const SettingsScreen(),
     // decorationServices: (_) => const DecorationServicesScreen(),
     guru: (_) => const FindGurusScreen(),
+    astrology: (_) => const AstrologyScreen(),
     // Services Detail Route
-
+    bookings: (_) => const BookingsScreen(),
+    onlinePuja: (_) => const OnlinePujaScreen(),
 
     // New E-Commerce View Mapping
     shop: (_) => const ShopScreen(),

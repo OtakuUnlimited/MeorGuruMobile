@@ -7,6 +7,7 @@ import '../components/password_field.dart';
 import '../components/confirm_password_field.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../routes/app_routes.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -150,6 +151,17 @@ void initState() {
       if (!mounted) return;
 
       if (result['success'] == true) {
+        final user =
+        result['data']['user'];
+
+        Navigator.pushReplacementNamed(
+          context,
+          AppRoutes.otpVerification,
+          arguments: {
+            'userId': user['id'],
+            'email': user['email'],
+          },
+        );
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../constants.dart';
 import '../../backend/services/auth_service.dart';
-
+import '../../routes/app_routes.dart';
 import '../pages/login_screen.dart';
 import '../pages/profile_screen.dart';
 import 'hamburger_overlay.dart';
@@ -21,6 +21,9 @@ class CustomTopNavBar extends StatelessWidget
   final bool showMenu;
   final bool showBack;
   final bool showProfile;
+  final bool showSettings;
+  final bool showBookings;
+  
   final List<Widget>? actions;
 
   const CustomTopNavBar({
@@ -30,6 +33,8 @@ class CustomTopNavBar extends StatelessWidget
     this.showMenu = false,
     this.showBack = false,
     this.showProfile = false,
+    this.showSettings = false,
+    this.showBookings = false,
     this.actions,
   }) : super(key: key);
 
@@ -140,6 +145,33 @@ class CustomTopNavBar extends StatelessWidget
       ),
       actions: [
         ...(actions ?? []),
+         if (showSettings)
+        IconButton(
+          icon: Icon(
+            Icons.settings,
+            color: iconAndTextColor,
+          ),
+          onPressed: () {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.settings,
+            );
+          },
+        ),
+
+        if (showBookings)
+          IconButton(
+            icon: Icon(
+              Icons.calendar_month_outlined,
+              color: iconAndTextColor,
+            ),
+            onPressed: () {
+              Navigator.pushNamed(
+                context,
+                AppRoutes.bookings, // create this route
+              );
+            },
+          ),
 
         if (showProfile)
           IconButton(

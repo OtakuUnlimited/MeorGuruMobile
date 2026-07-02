@@ -39,6 +39,10 @@ dependencies:
   shared_preferences: ^2.2.3
   url_launcher: ^6.3.0
   flutter_html: ^3.0.0
+  intl_phone_field: ^3.2.0
+  dropdown_search: ^6.0.1
+  country_pickers: ^3.0.1
+  image_picker: ^1.1.2
 
 dev_dependencies:
   flutter_test:
@@ -50,6 +54,12 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/main-logo.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -65,6 +75,7 @@ flutter:
     - lib/assets/images/main-banner.png
     - lib/assets/images/guru.png
     - lib/assets/images/main-logo.png
+    - lib/assets/json/state.json
 
   # To add assets to your application, add an assets section, like this:
   # assets:

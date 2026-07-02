@@ -3,6 +3,7 @@ import '../../constants.dart';
 import '../../backend/services/content_services.dart';
 import '../../routes/app_routes.dart';
 
+
 class CategoryGridView extends StatefulWidget {
   final int crossAxisCount;
   final double childAspectRatio;
@@ -27,6 +28,41 @@ class CategoryGridView extends StatefulWidget {
 
 class _CategoryGridViewState extends State<CategoryGridView> {
   final ContentService _contentService = ContentService();
+
+  List<dynamic> categories = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    loadCategories();
+  }
+
+  Future<void> loadCategories() async {
+    // 1. Load cached categories immediately
+    categories =
+        await _contentService.getCachedCategories();
+
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
+
+    // 2. Refresh from backend
+    try {
+      final freshCategories =
+          await _contentService.refreshCategories();
+
+      if (!mounted) return;
+
+      setState(() {
+        categories = freshCategories;
+      });
+    } catch (e) {
+      debugPrint("Category refresh failed: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -57,59 +93,41 @@ class _CategoryGridViewState extends State<CategoryGridView> {
               ),
             ),
 
-      child: FutureBuilder<List<dynamic>>(
-        future: _contentService.fetchCategories(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
+      child: isLoading
+          ? const Center(
               child: Padding(
-                padding: EdgeInsets.all(24.0),
+                padding: EdgeInsets.all(24),
                 child: CircularProgressIndicator(
                   color: AppColors.orangeMain,
                 ),
               ),
-            );
-          }
-
-          if (snapshot.hasError ||
-              !snapshot.hasData ||
-              snapshot.data!.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text(
-                  "Unable to load services at this time.",
+            )
+          : categories.isEmpty
+              ? const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      "Unable to load services at this time.",
+                    ),
+                  ),
+                )
+              : GridView.builder(
+                  shrinkWrap: widget.shrinkWrap,
+                  physics: widget.physics,
+                  itemCount: categories.length > 20
+                  ? 20
+                  : categories.length,
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: widget.crossAxisCount,
+                    crossAxisSpacing: widget.isCompact ? 10 : 14,
+                    mainAxisSpacing: widget.isCompact ? 12 : 18,
+                    childAspectRatio: widget.childAspectRatio,
+                  ),
+                  itemBuilder: (context, index) {
+                    final category = categories[index] as Map<String, dynamic>;
+                    return _buildCategoryItem(context, category);
+                  },
                 ),
-              ),
-            );
-          }
-
-          final categories = snapshot.data!;
-
-          return GridView.builder(
-            shrinkWrap: widget.shrinkWrap,
-            physics: widget.physics,
-            itemCount: categories.length,
-
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: widget.crossAxisCount,
-              crossAxisSpacing: widget.isCompact ? 10 : 14,
-              mainAxisSpacing: widget.isCompact ? 12 : 18,
-              childAspectRatio: widget.childAspectRatio,
-            ),
-
-            itemBuilder: (context, index) {
-              final category =
-                  categories[index] as Map<String, dynamic>;
-
-              return _buildCategoryItem(
-                context,
-                category,
-              );
-            },
-          );
-        },
-      ),
     );
   }
 

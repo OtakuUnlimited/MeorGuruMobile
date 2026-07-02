@@ -4,6 +4,7 @@ import '../../constants.dart';
 import '../components/top_nav_bar.dart';
 import 'register_screen.dart';
 import '../../backend/services/auth_service.dart';
+import '../../routes/app_routes.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({Key? key}) : super(key: key);
@@ -57,15 +58,36 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (result['success'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result['message'] ?? 'Login successful',
-            ),
-          ),
-        );
+        final user = result['data'];
 
-        Navigator.pop(context);
+        final bool isVerified =
+            user['email_or_otp_verified'] == 1;
+
+        final bool missingBasicDetails =
+          user['verification_step'] == 1; 
+
+        if (!isVerified) {
+          Navigator.pushReplacementNamed(
+            context,
+            AppRoutes.otpVerification,
+            arguments: {
+              'userId': user['id'],
+              'email': emailController.text.trim(),
+            },
+          );
+        } else if (missingBasicDetails) {
+          Navigator.pushReplacementNamed(
+            context,
+            AppRoutes.basicDetails,
+            arguments: user['id'],
+          );
+        } else {
+          Navigator.pushNamedAndRemoveUntil(
+            context,
+            AppRoutes.home,
+            (route) => false,
+          );
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

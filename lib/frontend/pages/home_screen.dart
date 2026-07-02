@@ -17,8 +17,6 @@ import '../components/home/about_section.dart';
 import '../components/home/top_decoration_section.dart';
 import '../components/home/popular_venues_section.dart';
 
-import 'login_screen.dart';
-
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
 
@@ -63,7 +61,7 @@ class _HomeScreenState extends State<HomeScreen> {
               onViewAll: () {
                 Navigator.pushNamed(
                   context,
-                  '/decoration-services',
+                  '/online-puja',
                 );
               },
             ),

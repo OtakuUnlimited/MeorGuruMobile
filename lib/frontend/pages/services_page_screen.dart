@@ -32,7 +32,7 @@ class _ServicesPageScreenState extends State<ServicesPageScreen> {
 
   Future<void> _loadCategories() async {
     try {
-      final data = await _contentService.fetchCategories();
+      final data = await _contentService.getCachedCategories();
 
       if (data.isNotEmpty) {
         setState(() {

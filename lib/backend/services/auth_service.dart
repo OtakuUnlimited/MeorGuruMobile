@@ -2,6 +2,7 @@
 
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
+import 'dart:io';
 
 class AuthService {
   final ApiClient _client = ApiClient();
@@ -21,8 +22,7 @@ class AuthService {
       },
     );
 
-    print("LOGIN RESPONSE:");
-    print(data);
+    print("LOGIN RESPONSE => $data");
 
     if (data['success'] == true &&
         data['data'] != null &&
@@ -75,18 +75,26 @@ class AuthService {
 }
 
   /// VERIFY OTP
-  Future<dynamic> verifyOtp(
-    String email,
-    String otp,
-  ) async {
-    return await _client.post(
-      'verify-otp',
-      {
-        'email': email,
-        'otp': otp,
-      },
-    );
-  }
+  Future<dynamic> verifyOtp({
+  required int userId,
+  required String otp,
+}) async {
+  return await _client.post(
+    'verification-code-submit/$userId',
+    {
+      'otp': otp,
+    },
+  );
+}
+
+Future<dynamic> resendOtp(int userId) async {
+  return await _client.post(
+    'resend-otp',
+    {
+      'user_id': userId,
+    },
+  );
+}
 
   /// STORE BASIC DETAILS
   Future<dynamic> storeBasicDetails(
@@ -98,27 +106,26 @@ class AuthService {
     );
   }
 
-  /// GET USER PROFILE
-  Future<dynamic> getProfile() async {
-  return await _client.get(
-    'user/get-profile',
+  Future<dynamic> updateProfile(
+  Map<String, dynamic> data,
+  File? image,
+) async {
+
+  return _client.multipartPost(
+    "guru_update_profile",
+    data.map(
+      (key, value) =>
+          MapEntry(key, value.toString()),
+    ),
+    image,
     requireAuth: true,
   );
 }
 
-  /// UPDATE USER PROFILE
-  Future<dynamic> updateProfile({
-  required String username,
-  required String email,
-  required String phone,
-}) async {
-  return await _client.post(
-    'update_profile',
-    {
-      'username': username,
-      'email': email,
-      'phone': phone,
-    },
+  /// GET USER PROFILE
+  Future<dynamic> getProfile() async {
+  return await _client.get(
+    'user/get-profile',
     requireAuth: true,
   );
 }
@@ -183,6 +190,15 @@ class AuthService {
   if (token != null && token.isNotEmpty) {
     ApiClient.setToken(token);
   }
+}
+
+/// DELETE CURRENT ROLE / ACCOUNT
+Future<dynamic> deleteCurrentRole() async {
+  return await _client.post(
+    'delete-current-role',
+    {},
+    requireAuth: true,
+  );
 }
 
 

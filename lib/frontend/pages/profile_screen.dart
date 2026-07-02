@@ -1,11 +1,21 @@
 import 'package:flutter/material.dart';
-import '../../constants.dart';
-import '../components/top_nav_bar.dart';
-import '../components/bottom_nav_bar.dart';
 import '../../backend/services/auth_service.dart';
+import '../../backend/services/content_services.dart';
+import '../../constants.dart';
+import '../../routes/app_routes.dart';
+
+import '../components/top_nav_bar.dart';
+
+import '../components/profile/profile_name_section.dart';
+import '../components/location_details_section.dart';
+import '../components/contact_details_section.dart';
+import '../components/profile/profile_image_section.dart';
+
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
+  const ProfileScreen({super.key});
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -13,461 +23,480 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final AuthService _authService = AuthService();
+  final ContentService _contentService = ContentService();
 
-  bool isLoading = true;
-  bool isSaving = false;
+  File? _selectedImage;
+  final ImagePicker _picker = ImagePicker();
+  // Name
+  final firstNameController = TextEditingController();
+  final middleNameController = TextEditingController();
+  final lastNameController = TextEditingController();
+  final usernameController = TextEditingController();
 
-  // Controllers (same fields as your UI)
-  final firstNameC = TextEditingController();
-  final middleNameC = TextEditingController();
-  final lastNameC = TextEditingController();
-  final usernameC = TextEditingController();
-  final emailC = TextEditingController();
-  final phoneC = TextEditingController();
-  final countryC = TextEditingController();
-  final stateC = TextEditingController();
+  // Location
   final suburbC = TextEditingController();
   final postalC = TextEditingController();
   final addressC = TextEditingController();
 
-  @override
+  // Contact
+  final phoneController = TextEditingController();
+  final countryCodeController = TextEditingController();
+  final emailController = TextEditingController();
+
+  List<dynamic> countries = [];
+  List<String> states = [];
+
+  String? selectedCountry;
+  String? selectedState;
+
+  bool isLoading = true;
+  bool isSaving = false;
+
+  // NEW
+  bool isEditing = false;
+
+  Map<String, dynamic>? user;
+    @override
   void initState() {
     super.initState();
-    loadProfile();
+    loadData();
   }
 
-  /// =======================
-  /// FETCH PROFILE FROM API
-  /// =======================
-  Future<void> loadProfile() async {
+  Future<void> loadData() async {
     try {
-      final res = await _authService.getProfile();
+      final response = await _authService.getProfile();
 
-      firstNameC.text = res['first_name'] ?? '';
-      middleNameC.text = res['middle_name'] ?? '';
-      lastNameC.text = res['last_name'] ?? '';
-      usernameC.text = res['username'] ?? '';
-      emailC.text = res['email'] ?? '';
-      phoneC.text = res['phone'] ?? '';
+      print("PROFILE RESPONSE => $response");
 
-      countryC.text = res['country'] ?? '';
-      stateC.text = res['state'] ?? '';
-      suburbC.text = res['suburb'] ?? '';
-      postalC.text = res['postal_code'] ?? '';
-      addressC.text = res['address'] ?? '';
+      user = response;
 
+      final countryData =
+          await _contentService.fetchCountries();
+
+      countries = countryData;
+
+      if (user != null) {
+        // Name
+        firstNameController.text =
+            user?['first_name'] ?? '';
+
+        middleNameController.text =
+            user?['middle_name'] ?? '';
+
+        lastNameController.text =
+            user?['last_name'] ?? '';
+
+        usernameController.text =
+            user?['username'] ?? '';
+
+        // Contact
+        phoneController.text =
+            user?['phone'] ?? '';
+
+        countryCodeController.text =
+        (user?['country_code'] ?? '+977')
+          .toString()
+          .replaceAll('++', '+');
+
+        emailController.text =
+            user?['email'] ?? '';
+
+        // Location
+        suburbC.text =
+            user?['suburb'] ?? '';
+
+        postalC.text =
+            user?['postal_code'] ?? '';
+
+        addressC.text =
+            user?['address'] ?? '';
+
+        selectedCountry =
+            user?['country'];
+
+        selectedState =
+            user?['state'];
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to load profile: $e")),
-      );
+      debugPrint(e.toString());
     }
 
-    setState(() => isLoading = false);
+    if (mounted) {
+      setState(() {
+        isLoading = false;
+      });
+    }
   }
 
-  /// =======================
-  /// SAVE PROFILE TO API
-  /// =======================
-  Future<void> saveProfile() async {
-    try {
-      setState(() => isSaving = true);
+  Future<void> pickProfileImage() async {
+  if (!isEditing) return;
 
-      final res = await _authService.updateProfile(
-        username: usernameC.text,
-        email: emailC.text,
-        phone: phoneC.text,
-      );
+  showModalBottomSheet(
+    context: context,
+    builder: (_) {
+      return SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text("Gallery"),
+              onTap: () async {
+                Navigator.pop(context);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(res['message'] ?? "Profile updated"),
+                final image = await _picker.pickImage(
+                  source: ImageSource.gallery,
+                  imageQuality: 80,
+                );
+
+                if (image != null) {
+                  setState(() {
+                    _selectedImage = File(image.path);
+                  });
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text("Camera"),
+              onTap: () async {
+                Navigator.pop(context);
+
+                final image = await _picker.pickImage(
+                  source: ImageSource.camera,
+                  imageQuality: 80,
+                );
+
+                if (image != null) {
+                  setState(() {
+                    _selectedImage = File(image.path);
+                  });
+                }
+              },
+            ),
+          ],
         ),
       );
+    },
+  );
+}
+
+    Future<void> saveProfile() async {
+    if (user == null) return;
+
+    setState(() {
+      isSaving = true;
+    });
+
+    try {
+      final response =
+          await _authService.updateProfile(
+            {
+        "user_id": user!['id'],
+
+        // Name
+        "first_name":
+            firstNameController.text.trim(),
+
+        "middle_name":
+            middleNameController.text.trim(),
+
+        "last_name":
+            lastNameController.text.trim(),
+
+        // Location
+        "country": selectedCountry,
+        "state": selectedState,
+
+        "suburb":
+            suburbC.text.trim(),
+
+        "postal_code":
+            postalC.text.trim(),
+
+        "address":
+            addressC.text.trim(),
+
+        // Contact
+        "phone":
+            phoneController.text.trim(),
+
+        "country_code":
+            countryCodeController.text.trim(),
+      }, _selectedImage,
+      );
+
+      if (!mounted) return;
+
+      if (response['success'] == true) {
+        setState(() {
+          isEditing = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Profile updated successfully",
+            ),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              response['message'].toString(),
+            ),
+          ),
+        );
+      }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        SnackBar(
+          content: Text(
+            e.toString(),
+          ),
+        ),
       );
     }
 
-    setState(() => isSaving = false);
-  }
-
-  @override
+    if (mounted) {
+      setState(() {
+        isSaving = false;
+      });
+    }
+  }  @override
   void dispose() {
-    firstNameC.dispose();
-    middleNameC.dispose();
-    lastNameC.dispose();
-    usernameC.dispose();
-    emailC.dispose();
-    phoneC.dispose();
-    countryC.dispose();
-    stateC.dispose();
+    // Name
+    firstNameController.dispose();
+    middleNameController.dispose();
+    lastNameController.dispose();
+    usernameController.dispose();
+
+    // Location
     suburbC.dispose();
     postalC.dispose();
     addressC.dispose();
+
+    // Contact
+    phoneController.dispose();
+    countryCodeController.dispose();
+    emailController.dispose();
+
     super.dispose();
-  }
-
-  // =======================
-  // YOUR ORIGINAL WIDGETS (UNCHANGED STYLE)
-  // =======================
-
-  Widget _buildInputLabelField(String label, TextEditingController c) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey,
-          ),
-        ),
-        const SizedBox(height: 6),
-        TextFormField(
-          controller: c,
-          style: const TextStyle(
-            color: AppColors.textDark,
-            fontSize: 15,
-          ),
-          decoration: InputDecoration(
-            fillColor: Colors.grey.shade100,
-            filled: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide.none,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProfileSectionCard(
-      String heading,
-      IconData icon,
-      List<Widget> children,
-      ) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.borderGray),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              CircleAvatar(
-                backgroundColor:
-                AppColors.orangeMain.withOpacity(0.1),
-                child: Icon(icon,
-                    color: AppColors.orangeMain),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                heading,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textDark,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ...children,
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDropdownRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.black54, fontSize: 14)),
-          Row(
-            children: [
-              Text(value,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14)),
-              const Icon(Icons.keyboard_arrow_down,
-                  size: 18, color: Colors.grey),
-            ],
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInlineInputRow(
-      String label,
-      String value, {
-        Color? valueColor,
-      }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.black54, fontSize: 14)),
-          Text(
-            value,
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              color: valueColor ?? AppColors.textDark,
-              fontSize: 14,
-              decoration: TextDecoration.underline,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
+  }  
+    @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
       );
     }
 
     return Scaffold(
+      backgroundColor: AppColors.bg,
       appBar: CustomTopNavBar(
-        title: "My Profile",
+        title: "Profile",
         style: NavBarStyle.BrandedLight,
-        showMenu: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.shopping_cart,
-                color: Colors.black),
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.account_circle,
-                color: Colors.black),
-            onPressed: () {},
-          ),
-        ],
+        showSettings: true,
+        showBookings: true,
       ),
-
       body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16.0,
-          vertical: 20,
-        ),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            CircleAvatar(
-              radius: 65,
-              backgroundColor: Colors.grey.shade300,
-              child: const Icon(Icons.person, size: 60),
-            ),
+            // Settings button
 
-            const SizedBox(height: 12),
-
-            Text(
-              "${firstNameC.text} ${lastNameC.text}",
-              style: const TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
-              ),
+            // Profile image
+            ProfileImageSection(
+              imageUrl: user?['profile_image'],
+              selectedImage: _selectedImage,
+              editable: isEditing,
+              onTap: pickProfileImage,
+              firstName: firstNameController.text,
+              lastName: lastNameController.text,
             ),
 
             const SizedBox(height: 24),
 
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInputLabelField(
-                      "FIRST NAME", firstNameC),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildInputLabelField(
-                      "MIDDLE NAME", middleNameC),
-                ),
-              ],
+            // Name section
+            ProfileNameSection(
+              firstNameC: firstNameController,
+              middleNameC: middleNameController,
+              lastNameC: lastNameController,
+              usernameC: usernameController,
+              enabled: isEditing,
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+                        // Location section
+            LocationDetailsSection(
+              enabled: isEditing,
+              initialCountry: selectedCountry,
+              initialState: selectedState,
+              suburbController: suburbC,
+              postCodeController: postalC,
+              addressController: addressC,
 
-            Row(
-              children: [
-                Expanded(
-                  child: _buildInputLabelField(
-                      "LAST NAME", lastNameC),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildInputLabelField(
-                      "USERNAME", usernameC),
-                ),
-              ],
+              onCountryChanged: (
+                String? country,
+                String? state,
+              ) {
+                setState(() {
+                  selectedCountry = country;
+                  selectedState = state;
+                });
+              },
             ),
 
             const SizedBox(height: 24),
 
-            _buildProfileSectionCard(
-              "Location Details",
-              Icons.location_on_outlined,
-              [
-                _buildDropdownRow(
-                    "Country", countryC.text),
-                _buildDropdownRow(
-                    "State/Province", stateC.text),
-                _buildInlineInputRow(
-                    "Suburb/City", suburbC.text),
-                _buildInlineInputRow(
-                  "Post Code",
-                  postalC.text,
-                  valueColor: AppColors.orangeMain,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: addressC,
-                  decoration: const InputDecoration(
-                    labelText: "Full Address",
-                  ),
-                ),
-              ],
+            // Contact section
+            ContactDetailsSection(
+              enabled: isEditing,
+              phoneController: phoneController,
+              countryCodeController:
+                  countryCodeController,
             ),
 
-            const SizedBox(height: 16),
-
-            _buildProfileSectionCard(
-              "Contact Details",
-              Icons.phone_outlined,
-              [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildInputLabelField(
-                          "PHONE", phoneC),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildInputLabelField("EMAIL", emailC),
-              ],
-            ),
-
-            const SizedBox(height: 32),
-
+            const SizedBox(height: 30),
+                        // Edit / Save button
             SizedBox(
               width: double.infinity,
-              height: 50,
+              height: 55,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.maroonRed,
                 ),
-                onPressed:
-                isSaving ? null : saveProfile,
+                onPressed: isSaving
+                    ? null
+                    : () async {
+                        if (!isEditing) {
+                          setState(() {
+                            isEditing = true;
+                          });
+                        } else {
+                          await saveProfile();
+                        }
+                      },
                 child: isSaving
                     ? const CircularProgressIndicator(
-                  color: Colors.white,
-                )
-                    : const Text(
-                  "Save Changes",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight:
-                    FontWeight.bold,
+                        color: Colors.white,
+                      )
+                    : Text(
+                        isEditing
+                            ? "SAVE PROFILE"
+                            : "EDIT PROFILE",
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Cancel button
+            SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(
+                    color: Colors.grey.shade300,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius:
+                        BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: () {
+                  if (isEditing) {
+                    setState(() {
+                      isEditing = false;
+                    });
+
+                    loadData(); // reload original values
+                  } else {
+                    Navigator.pop(context);
+                  }
+                },
+                child: Text(
+                  isEditing
+                      ? "CANCEL EDIT"
+                      : "BACK",
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
 
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
+            // Logout button
             SizedBox(
               width: double.infinity,
-              height: 50,
-              child: OutlinedButton(
-                onPressed: () =>
-                    Navigator.pop(context),
-                child: const Text("Cancel"),
+              height: 55,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor:
+                      AppColors.maroonRed,
+                ),
+                onPressed: () async {
+                  final confirm =
+                      await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text("Logout"),
+                      content: const Text(
+                        "Are you sure you want to logout?",
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.pop(
+                                  context, false),
+                          child:
+                              const Text("Cancel"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () =>
+                              Navigator.pop(
+                                  context, true),
+                          child:
+                              const Text("Logout"),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true) {
+                    await AuthService.logout();
+
+                    if (!mounted) return;
+
+                    Navigator.pushNamedAndRemoveUntil(
+                      context,
+                      AppRoutes.login,
+                      (route) => false,
+                    );
+                  }
+                },
+                child: const Text(
+                  "LOGOUT",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
-            const SizedBox(height: 12),
-
-SizedBox(
-  width: double.infinity,
-  height: 50,
-  child: ElevatedButton(
-    style: ElevatedButton.styleFrom(
-      backgroundColor: Colors.red,
-    ),
-    onPressed: () async {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text("Logout"),
-          content: const Text(
-            "Are you sure you want to logout?",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.pop(context, false),
-              child: const Text("Cancel"),
-            ),
-            ElevatedButton(
-              onPressed: () =>
-                  Navigator.pop(context, true),
-              child: const Text("Logout"),
-            ),
-          ],
-        ),
-      );
-
-      if (confirm == true) {
-        await AuthService.logout();
-
-        if (!mounted) return;
-
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/login',
-          (route) => false,
-        );
-      }
-    },
-    child: const Text(
-      "Logout",
-      style: TextStyle(
-        color: Colors.white,
-        fontSize: 16,
-        fontWeight: FontWeight.bold,
-      ),
-    ),
-  ),
-),
           ],
         ),
       ),
-
-      bottomNavigationBar:
-      const CustomBottomNavBar(activeIndex: 4),
     );
   }
 }
