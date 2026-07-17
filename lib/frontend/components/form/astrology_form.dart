@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../backend/services/api_client.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' as stripe;
 import '../../../backend/services/bookings.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import '../searchable_country_dropdown.dart';
@@ -96,6 +96,50 @@ final TextEditingController customerPhoneController =
     TextEditingController();
 
 
+
+  Future<void> checkPaymentStatus(
+    int bookingId) async {
+
+  for (int i = 0; i < 10; i++) {
+
+    await Future.delayed(
+      const Duration(seconds: 2),
+    );
+
+    final response = await _client.get(
+      'mobile/payment-status/$bookingId',
+    );
+
+    if (response['payment_status'] == "Paid") {
+
+      if (!mounted) return;
+
+      Navigator.pushReplacementNamed(
+        context,
+        '/payment-success',
+      );
+
+      return;
+    }
+  }
+
+  if (!mounted) return;
+
+  ScaffoldMessenger.of(context).showSnackBar(
+
+    const SnackBar(
+
+      content: Text(
+        "Payment verification timed out.",
+      ),
+
+    ),
+
+  );
+}
+    
+
+
     Future<void> submitBooking() async {
   print("========== SUBMIT BOOKING ==========");
 
@@ -104,41 +148,8 @@ final TextEditingController customerPhoneController =
       _isSubmitting = true;
     });
 
-    print("Astrology ID: ${widget.astrologyData['id']}");
-    print("Order For: $_orderForCount");
 
-    print("------ Personal Details ------");
-    for (int i = 0; i < people.length; i++) {
-      final person = people[i];
-      print("Person ${i + 1}");
-      print("Full Name: ${person.fullNameController.text}");
-      print("Gender: ${person.gender}");
-      print("DOB: ${person.dobController.text}");
-      print("Birth Hour: ${person.birthHour}");
-      print("Birth Minute: ${person.birthMinute}");
-      print("Birth Country: ${person.birthCountry}");
-      print("Birth Place: ${person.birthPlaceController.text}");
-      print("Birth Name: ${person.birthNameController.text}");
-    }
-
-    print("------ Family Details ------");
-    print("Father Gotra: $selectedGotra");
-    print("Father Birth Name: ${fatherBirthNameController.text}");
-    print("Mother Birth Name: ${motherBirthNameController.text}");
-    print("Notes: ${notesController.text}");
-
-    print("------ Delivery Details ------");
-    print("Country: $deliveryCountry");
-    print("State: $deliveryState");
-    print("Address: ${deliveryAddressController.text}");
-    print("Suburb: ${suburbController.text}");
-    print("Post Code: ${postCodeController.text}");
-
-    print("------ Customer Details ------");
-    print("Customer Name: ${customerNameController.text}");
-    print("Customer Email: ${customerEmailController.text}");
-    print("Customer Phone: ${customerPhoneController.text}");
-
+   
     final body = {
       'astrology_id': widget.astrologyData['id'],
       'order_for': _orderForCount,
@@ -168,26 +179,20 @@ final TextEditingController customerPhoneController =
     print("Calling API...");
 
     final response = await _client.post(
-      'astrology/booking',
+      'mobile/astrology/booking',
       body,
     );
 
     print("API SUCCESS");
     print(response);
 
-    final stripeUrl = response['stripe_url'];
+    final bookingId = response['booking_id'];
+    final clientSecret = response['client_secret'];
 
-    print("Stripe URL: $stripeUrl");
-
-    if (stripeUrl != null) {
-      print("Launching Stripe...");
-      await launchUrl(
-        Uri.parse(stripeUrl),
-        mode: LaunchMode.externalApplication,
-      );
-    } else {
-      print("No stripe_url returned.");
-    }
+    await _makePayment(
+      clientSecret,
+      bookingId,
+    );
   } catch (e, stackTrace) {
     print("========== ERROR ==========");
     print(e);
@@ -203,6 +208,102 @@ final TextEditingController customerPhoneController =
       _isSubmitting = false;
     });
   }
+}
+
+
+Future<void> _makePayment(
+  String clientSecret,
+  int bookingId,
+) async {
+
+  try {
+
+    await stripe.Stripe.instance.initPaymentSheet(
+
+      paymentSheetParameters:
+
+          stripe.SetupPaymentSheetParameters(
+
+        merchantDisplayName: 'Mero Guru',
+
+        paymentIntentClientSecret: clientSecret,
+
+      ),
+
+    );
+
+    await stripe.Stripe.instance.presentPaymentSheet();
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+
+      const SnackBar(
+
+        content: Text("Payment Successful"),
+
+        backgroundColor: Colors.green,
+
+      ),
+
+    );
+
+  Future<bool> checkPaymentStatus(int bookingId) async {
+  final response = await _client.get(
+    'mobile/payment-status/$bookingId',
+  );
+
+  if (response['payment_status'] == 'Paid') {
+    return true;
+  }
+
+  return false;
+}
+
+for (int i = 0; i < 10; i++) {
+  await Future.delayed(const Duration(seconds: 2));
+
+  final paid = await checkPaymentStatus(bookingId);
+
+  if (paid) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("Payment Verified"),
+        backgroundColor: Colors.green,
+      ),
+    );
+
+    break;
+  }
+}
+
+  } on stripe.StripeException catch (e) {
+
+    ScaffoldMessenger.of(context).showSnackBar(
+
+      SnackBar(
+
+        content: Text(
+          e.error.localizedMessage ??
+              "Payment Cancelled",
+        ),
+
+      ),
+
+    );
+
+  }  on stripe.StripeConfigException catch (e) {
+  print("Stripe Config Exception");
+  print(e);
+  print(e.message);
+  rethrow;
+} on stripe.StripeException catch (e) {
+  print("Stripe Exception");
+  print(e.error);
+  rethrow;
+}
 }
 
 @override
@@ -231,6 +332,8 @@ void dispose() {
 
   @override
   Widget build(BuildContext context) {
+    final String price =
+    widget.astrologyData['price']?.toString() ?? '0';
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -401,9 +504,23 @@ void dispose() {
           // Pricing Summary Section Row layout
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text('Payment Amount', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
-              Text('\$100', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            children: [
+              const Text(
+                'Payment Amount',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              Text(
+                '\$$price',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),

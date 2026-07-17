@@ -43,6 +43,8 @@ dependencies:
   dropdown_search: ^6.0.1
   country_pickers: ^3.0.1
   image_picker: ^1.1.2
+  flutter_stripe: ^13.1.0
+  intl: ^0.20.3
 
 dev_dependencies:
   flutter_test:

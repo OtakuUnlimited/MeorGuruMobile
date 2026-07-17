@@ -89,9 +89,13 @@ class _HomeScreenState extends State<HomeScreen> {
               title: "Top Decoration Service Providers",
               onViewAll: () {
                 Navigator.pushNamed(
-                  context,
-                  '/decoration-services',
-                );
+                context,
+                AppRoutes.services,
+                arguments: {
+                  'slug': 'decoration',
+                  'title': 'Decoration',
+                },
+              );
               },
             ),
 
@@ -104,7 +108,11 @@ class _HomeScreenState extends State<HomeScreen> {
               onViewAll: () {
                 Navigator.pushNamed(
                   context,
-                  '/venues',
+                  AppRoutes.services,
+                  arguments: {
+                    'slug': 'venue',
+                    'title': 'venue',
+                  },
                 );
               },
             ),

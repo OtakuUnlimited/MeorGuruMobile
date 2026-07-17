@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../constants.dart';
 import '../../../backend/services/content_services.dart';
+import '../../../routes/app_routes.dart';
 
 class PopularVenuesSection extends StatelessWidget {
   const PopularVenuesSection({
@@ -50,8 +51,15 @@ class PopularVenuesSection extends StatelessWidget {
 
               final venue =
                   venues[index];
-
-              return Container(
+              return GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.serviceDetails,
+                    arguments: venue['slug'],
+                  );
+                },
+              child: Container(
                 width: 240,
 
                 margin:
@@ -154,7 +162,7 @@ class PopularVenuesSection extends StatelessWidget {
                           ),
 
                           Text(
-                            venue['location'] ??
+                            venue['state'] ??
                                 'Australia',
 
                             maxLines: 1,
@@ -184,8 +192,13 @@ class PopularVenuesSection extends StatelessWidget {
 
                             child:
                                 ElevatedButton(
-                              onPressed:
-                                  () {},
+                              onPressed: () {
+                                Navigator.pushNamed(
+                                  context,
+                                  AppRoutes.serviceDetails,
+                                  arguments: venue['slug'],
+                                );
+                              },
 
                               style:
                                   ElevatedButton
@@ -218,6 +231,7 @@ class PopularVenuesSection extends StatelessWidget {
                     ),
                   ],
                 ),
+              )
               );
             },
           ),

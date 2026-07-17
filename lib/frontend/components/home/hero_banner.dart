@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../../../constants.dart';
+import '../../../routes/app_routes.dart';
 
 class HeroBanner extends StatelessWidget {
   const HeroBanner({super.key});
@@ -41,7 +42,13 @@ class HeroBanner extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: () 
+            {
+              Navigator.pushNamed(
+                  context,
+                  '/guru',
+                );
+            },
             icon: const Icon(Icons.search),
             label: const Text("Find a Guru"),
             style: ElevatedButton.styleFrom(

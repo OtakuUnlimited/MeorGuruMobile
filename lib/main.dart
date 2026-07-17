@@ -3,9 +3,15 @@ import 'package:flutter/material.dart';
 import 'constants.dart';
 import 'routes/app_routes.dart';
 import 'backend/services/auth_service.dart';
+import 'package:flutter_stripe/flutter_stripe.dart' as stripe;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+   stripe.Stripe.publishableKey = "pk_test_51S00QKJlpluk7DSJU4VqhUGOrlt0hznAS3atQjUhPkjllkvvWEIBOYRV8dWoM9N8YW1lo4jqYZqNexCtIdMjeQOY00LA99ZWHJ";
+  // Replace with your Stripe publishable key
+
+  await stripe.Stripe.instance.applySettings();
 
   // Restore saved login token
   await AuthService.initializeAuth();

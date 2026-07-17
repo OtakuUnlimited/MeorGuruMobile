@@ -147,11 +147,11 @@ class _OnlinePujaDetailScreenState
                       backgroundColor: const Color(0xFFC62828),
                     ),
                     onPressed: () {
-                      // Navigator.pushNamed(
-                      //   context,
-                      //   AppRoutes.onlinePujaOrder,
-                      //   arguments: data,
-                      //);
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.onlinePujaOrder,
+                        arguments: data,
+                      );
                     },
                     child: const Text(
                       "BOOK NOW",

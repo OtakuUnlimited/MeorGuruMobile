@@ -159,7 +159,7 @@ void initState() {
           AppRoutes.otpVerification,
           arguments: {
             'userId': user['id'],
-            'email': user['email'],
+            'email': emailController.text.trim(),
           },
         );
         ScaffoldMessenger.of(context).showSnackBar(

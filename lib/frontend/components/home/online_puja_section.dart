@@ -2,6 +2,7 @@
 
 import 'package:flutter/material.dart';
 import '../../../backend/services/content_services.dart';
+import '../../../routes/app_routes.dart';
 
 class OnlinePujaSection extends StatelessWidget {
   const OnlinePujaSection({super.key});
@@ -45,7 +46,10 @@ class OnlinePujaSection extends StatelessWidget {
                   child: InkWell(
                     borderRadius: BorderRadius.circular(18),
                     onTap: () {
-                      // Navigate to full puja list page
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.onlinePuja,
+                      );
                     },
                     child: const Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -70,8 +74,15 @@ class OnlinePujaSection extends StatelessWidget {
               }
 
               final puja = pujas[index];
-
-              return Container(
+              return GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.onlinePujaDetail,
+                  arguments: puja['slug'],
+                );
+              },
+              child: Container(
                 width: 150,
                 margin: const EdgeInsets.only(right: 12),
                 decoration: BoxDecoration(
@@ -109,6 +120,7 @@ class OnlinePujaSection extends StatelessWidget {
                     )
                   ],
                 ),
+              )
               );
             },
           ),

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../constants.dart';
 import '../../backend/services/content_services.dart';
+import '../components/guru/service_details_card.dart';
+import '../components/guru/professional_profile_card.dart';
+import '../components/guru/location_details_block.dart';
 import '../components/top_nav_bar.dart';
 import '../components/bottom_nav_bar.dart';
-
 class GuruProfileScreen extends StatefulWidget {
   final String slug;
 
@@ -17,232 +18,278 @@ class GuruProfileScreen extends StatefulWidget {
 }
 
 class _GuruProfileScreenState extends State<GuruProfileScreen> {
-  late Future<dynamic> guruFuture;
+  final ContentService _contentService = ContentService();
+
+  bool _loading = true;
+  Map<String, dynamic>? guru;
 
   @override
   void initState() {
     super.initState();
-
-    print("===== GURU PROFILE OPENED =====");
-    print("Slug: ${widget.slug}");
-
-    guruFuture = ContentService().fetchGuruDetails(widget.slug);
+    _loadGuru();
   }
 
-  Map<String, dynamic> _parseGuru(dynamic response) {
-    print("===== RAW RESPONSE =====");
-    print(response);
-
+  Future<void> _loadGuru() async {
     try {
-      if (response is Map && response['data'] != null) {
-        if (response['data'] is List) {
-          return Map<String, dynamic>.from(response['data'][0]);
-        }
-        return Map<String, dynamic>.from(response['data']);
-      }
+      final response =
+          await _contentService.fetchGuruDetails(widget.slug);
 
-      return Map<String, dynamic>.from(response);
+      print(response);
+
+      setState(() {
+        guru = Map<String, dynamic>.from(response['data'][0]);
+        _loading = false;
+      });
     } catch (e) {
-      print("PARSE ERROR: $e");
-      return {};
+      print(e);
+
+      setState(() {
+        _loading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
+    if (guru == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text("Guru not found"),
+        ),
+      );
+    }
+
     return Scaffold(
-      appBar: const CustomTopNavBar(
-        title: 'Mero Guru',
+      backgroundColor: Colors.white,
+      appBar: CustomTopNavBar(
+        title: "Mero Guru",
         style: NavBarStyle.BrandedLight,
-        showMenu: true,
+        showBack: true,
+        showProfile: true,
       ),
-      backgroundColor: AppColors.bg,
-
-      body: FutureBuilder(
-        future: guruFuture,
-        builder: (context, snapshot) {
-
-          print("===== FUTURE STATE =====");
-          print(snapshot.connectionState);
-          print(snapshot.hasData);
-          print(snapshot.hasError);
-          print(snapshot.error);
-          print(snapshot.data);
-
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          }
-
-          if (!snapshot.hasData) {
-            return const Center(child: Text("No Guru Found"));
-          }
-
-          final guru = _parseGuru(snapshot.data);
-
-          final avatar = guru['avatar'] ?? '';
-
-          final fullName = [
-            guru['first_name'] ?? '',
-            guru['middle_name'] ?? '',
-            guru['last_name'] ?? '',
-          ].where((e) => e.toString().trim().isNotEmpty).join(' ');
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-
-                // ================= IMAGE (UNCHANGED UI) =================
-                Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: AppColors.orangeMain.withOpacity(0.2),
-                          width: 4,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 20,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Stack(
+                children: [
+                  Container(
+                    width: 140,
+                    height: 140,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      image: DecorationImage(
+                        image: NetworkImage(
+                          guru!['avatar'] ??
+                              'https://via.placeholder.com/150',
                         ),
-                      ),
-                      child: CircleAvatar(
-                        radius: 75,
-                        backgroundImage:
-                            avatar.isNotEmpty ? NetworkImage(avatar) : null,
-                        child: avatar.isEmpty
-                            ? const Icon(Icons.person, size: 60)
-                            : null,
+                        fit: BoxFit.cover,
                       ),
                     ),
-                  ],
-                ),
-
-                const SizedBox(height: 16),
-
-                // ================= NAME (NOW FROM API) =================
-                Text(
-                  fullName.isEmpty ? "Unknown Guru" : fullName,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
                   ),
+                  Positioned(
+                    top: 0,
+                    right: 4,
+                    child: CircleAvatar(
+                      radius: 16,
+                      backgroundColor: Colors.white,
+                      child: Icon(
+                        Icons.share_outlined,
+                        size: 16,
+                        color: Colors.amber.shade900,
+                      ),
+                    ),
+                  )
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            Center(
+              child: Text(
+                "${guru!['first_name']} "
+                "${guru!['middle_name'] ?? ''} "
+                "${guru!['last_name']}",
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF1A1A1A),
+                  height: 1.1,
                 ),
+              ),
+            ),
 
-                const SizedBox(height: 4),
+            const SizedBox(height: 4),
 
-                // ================= TAGLINE (SAFE) =================
-                Text(
-                  guru['about_us'] ?? guru['about_me'] ?? '',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    color: AppColors.orangeMain,
-                    fontStyle: FontStyle.italic,
-                  ),
+            Center(
+              child: Text(
+                '"Preserving Tradition, Inspiring Faith"',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.amber.shade900,
+                  fontWeight: FontWeight.w600,
                 ),
+              ),
+            ),
 
-                const SizedBox(height: 24),
+            const SizedBox(height: 24),
 
-                // ================= ABOUT ME (STATIC UI KEPT) =================
-                _section(
-                  "ABOUT ME",
-                  guru['about_us'] ?? guru['about_me'] ??
-                      "No description available.",
-                ),
+            const Text(
+              "ABOUT ME",
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey,
+                letterSpacing: 0.5,
+              ),
+            ),
 
-                const SizedBox(height: 16),
+            const SizedBox(height: 6),
 
-                // ================= SERVICE DETAILS (STATIC UI + DATA OPTIONAL) =================
-                _section(
-                  "SERVICE DETAILS",
-                  "Experience: ${guru['experience'] ?? 'N/A'}\n"
-                      "Qualification: ${guru['qualification'] ?? 'N/A'}\n"
-                      "Availability: ${guru['availability'] ?? 'N/A'}",
-                ),
+            Text(
+              guru!['about_us'] ?? "No description available.",
+              style: TextStyle(
+                fontSize: 13,
+                color: Colors.grey.shade800,
+                height: 1.4,
+              ),
+            ),
 
-                const SizedBox(height: 16),
+            const SizedBox(height: 24),
 
-                // ================= LOCATION (YOUR UI LOGIC KEPT) =================
-                _section(
-                  "LOCATION DETAILS",
-                  "Country: ${guru['country'] ?? 'N/A'}\n"
-                      "State: ${guru['state'] ?? 'N/A'}\n"
-                      "City: ${guru['suburb'] ?? 'N/A'}\n"
-                      "Post Code: ${guru['postal_code'] ?? 'N/A'}",
-                ),
+            ServiceDetailsCard(
+              guru: guru!,
+            ),
 
-                const SizedBox(height: 16),
+            const SizedBox(height: 20),
 
-                // ================= CONTACT =================
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.brownAccent,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            LocationDetailsBlock(
+              guru: guru!,
+            ),
+
+            const SizedBox(height: 20),
+
+            ProfessionalProfileCard(
+              guru: guru!,
+            ),
+
+            const SizedBox(height: 24),
+
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFB34200),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment:
+                        MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
                         "Get in Touch",
                         style: TextStyle(
-                          color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Text("Phone: ${guru['phone'] ?? '-'}",
-                          style: const TextStyle(color: Colors.white)),
-                      const SizedBox(height: 6),
-                      Text("Email: ${guru['email'] ?? '-'}",
-                          style: const TextStyle(color: Colors.white)),
+                      Icon(
+                        Icons.help_outline,
+                        color: Colors.white.withOpacity(.8),
+                      )
                     ],
                   ),
-                ),
 
-                const SizedBox(height: 20),
-              ],
+                  const SizedBox(height: 16),
+
+                  _buildContactRow(
+                    Icons.phone_outlined,
+                    "PHONE NUMBER",
+                    "+${guru!['country_code']} ${guru!['phone']}",
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  _buildContactRow(
+                    Icons.mail_outline,
+                    "EMAIL ADDRESS",
+                    guru!['email'] ?? "-",
+                  ),
+                ],
+              ),
             ),
-          );
-        },
-      ),
 
-      bottomNavigationBar: const CustomBottomNavBar(activeIndex: 4),
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+      bottomNavigationBar: const CustomBottomNavBar(
+        activeIndex: 4,
+      ),
     );
   }
 
-  Widget _section(String title, String content) {
+  Widget _buildContactRow(
+    IconData icon,
+    String label,
+    String text,
+  ) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withOpacity(.12),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderGray),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: Colors.white.withOpacity(.2),
+            child: Icon(
+              icon,
+              color: Colors.white,
             ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            content,
-            style: const TextStyle(fontSize: 14),
-          ),
+          const SizedBox(width: 14),
+          Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9,
+                  color: Colors.white.withOpacity(.6),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                text,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          )
         ],
       ),
     );

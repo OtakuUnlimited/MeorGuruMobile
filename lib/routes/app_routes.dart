@@ -25,7 +25,7 @@ import '../frontend/pages/booking_screen.dart';
 
 import '../frontend/pages/online_puja_screen.dart';
 import '../frontend/pages/online_puja_detail_screen.dart';
-//import '../frontend/pages/online_puja_order_screen.dart';
+import '../frontend/pages/online_puja_order_screen.dart';
 
 import '../frontend/pages/astrology_screen.dart';
 import '../frontend/pages/astrology_detail_screen.dart';
@@ -56,7 +56,7 @@ class AppRoutes {
   
   static const String onlinePuja = '/online-puja';
   static const String onlinePujaDetail = '/online-puja-detail';
-
+  static const String onlinePujaOrder = '/online-puja-order';
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
   switch (settings.name) {
     case astrologyDetail:
@@ -71,6 +71,15 @@ class AppRoutes {
 
       return MaterialPageRoute(
         builder: (_) => OnlinePujaDetailScreen(slug: slug),
+      );
+
+    case onlinePujaOrder:
+      final args = settings.arguments as Map<String, dynamic>;
+
+      return MaterialPageRoute(
+        builder: (_) => OnlinePujaOrderScreen(
+          pujaData: args,
+        ),
       );
 
     case astrologyOrder:

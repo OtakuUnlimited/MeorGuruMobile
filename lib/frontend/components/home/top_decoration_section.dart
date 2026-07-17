@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../constants.dart';
 import '../../../backend/services/content_services.dart';
+import '../../../routes/app_routes.dart';
 
 class TopDecorationSection extends StatelessWidget {
   const TopDecorationSection({super.key});
@@ -40,7 +41,15 @@ class TopDecorationSection extends StatelessWidget {
             final title = (service['title'] ?? service['name'] ?? 'No Title').toString();
             final location = (service['location'] ?? service['city'] ?? 'Australia').toString();
 
-            return Container(
+            return GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(
+                    context,
+                    AppRoutes.serviceDetails,
+                    arguments: service['slug'],
+                  );
+                },
+              child: Container(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -111,21 +120,26 @@ class TopDecorationSection extends StatelessWidget {
                   ),
 
                   const SizedBox(width: 8),
+                  
 
                   Container(
                     height: 36,
                     width: 36,
+                    margin: const EdgeInsets.only(top: 20),
                     decoration: BoxDecoration(
+                      
                       border: Border.all(color: AppColors.borderGray),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
+                      
                       Icons.arrow_forward_ios,
                       size: 16,
                     ),
                   ),
                 ],
               ),
+            )
             );
           }).toList(),
         );
