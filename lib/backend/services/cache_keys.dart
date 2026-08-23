@@ -10,4 +10,11 @@ class CacheKeys {
   static const patro = 'patro';
   static const astrologyServices = 'astrology_services';
   static const events = 'events';
+
+  // Cart
+  static const cart = 'cart';
+  static const auspiciousCalender = 'auspicious_calender';
+  static const auspiciousRituals = 'auspicious_rituals';
+  static const auspiciousYears = 'auspicious_years';
+  static const auspiciousMonths = 'auspicious_months';
 }

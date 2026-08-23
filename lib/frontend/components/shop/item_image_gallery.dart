@@ -16,21 +16,43 @@ class ItemImageGallery extends StatefulWidget {
 class _ItemImageGalleryState extends State<ItemImageGallery> {
   int _activeImageIndex = 0;
 
-  void _previousImage() {
-    setState(() {
-      _activeImageIndex = _activeImageIndex > 0 
-          ? _activeImageIndex - 1 
-          : widget.images.length - 1;
-    });
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
   }
 
-  void _nextImage() {
-    setState(() {
-      _activeImageIndex = _activeImageIndex < widget.images.length - 1 
-          ? _activeImageIndex + 1 
-          : 0;
-    });
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
+
+  void _previousImage() {
+  final index = _activeImageIndex > 0
+      ? _activeImageIndex - 1
+      : widget.images.length - 1;
+
+  _pageController.animateToPage(
+    index,
+    duration: const Duration(milliseconds: 300),
+    curve: Curves.easeInOut,
+  );
+}
+
+void _nextImage() {
+  final index = _activeImageIndex < widget.images.length - 1
+      ? _activeImageIndex + 1
+      : 0;
+
+  _pageController.animateToPage(
+    index,
+    duration: const Duration(milliseconds: 300),
+    curve: Curves.easeInOut,
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -49,31 +71,65 @@ class _ItemImageGalleryState extends State<ItemImageGallery> {
                 border: Border.all(color: Colors.grey.shade200),
                 borderRadius: const BorderRadius.vertical(bottom: Radius.circular(20)),
               ),
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Image.network(
-                  widget.images[_activeImageIndex],
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => const Icon(Icons.image, size: 80, color: Colors.grey),
-                ),
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: widget.images.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _activeImageIndex = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  return Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Image.network(
+                      widget.images[index],
+                      fit: BoxFit.contain,
+                      errorBuilder: (_, __, ___) =>
+                          const Icon(Icons.image, size: 80, color: Colors.grey),
+                    ),
+                  );
+                },
               ),
             ),
             // Left Chevron Toggle
             Positioned(
-              left: 8,
-              top: 116,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back_ios, color: AppColors.textDark),
-                onPressed: _previousImage,
+              left: 12,
+              top: 110,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  splashRadius: 22,
+                  icon: const Icon(
+                    Icons.arrow_back_ios_new,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  onPressed: _previousImage,
+                ),
               ),
             ),
             // Right Chevron Toggle
             Positioned(
-              right: 8,
-              top: 116,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_forward_ios, color: AppColors.textDark),
-                onPressed: _nextImage,
+              right: 12,
+              top: 110,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  splashRadius: 22,
+                  icon: const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  onPressed: _nextImage,
+                ),
               ),
             ),
           ],
@@ -90,7 +146,13 @@ class _ItemImageGalleryState extends State<ItemImageGallery> {
             itemBuilder: (context, index) {
               final bool isActive = index == _activeImageIndex;
               return GestureDetector(
-                onTap: () => setState(() => _activeImageIndex = index),
+                onTap: () {
+                  _pageController.animateToPage(
+                    index,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                  );
+                },
                 child: Container(
                   margin: const EdgeInsets.only(right: 10),
                   width: 60,

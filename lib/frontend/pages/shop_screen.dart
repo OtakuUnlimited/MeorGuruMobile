@@ -6,6 +6,8 @@ import '../components/shop/shop_search_banner.dart';
 import '../components/shop/shop_category_scroller.dart';
 import '../components/shop/popular_item_carousel.dart';
 import '../components/shop/shop_widgets.dart'; // Contains ProductCard structural styling
+import '../../backend/services/shop_service.dart';
+import '../../routes/app_routes.dart';
 
 class ShopScreen extends StatefulWidget {
   const ShopScreen({Key? key}) : super(key: key);
@@ -15,18 +17,53 @@ class ShopScreen extends StatefulWidget {
 }
 
 class _ShopScreenState extends State<ShopScreen> {
+  final ShopService _shopService = ShopService();
+
+  bool _loading = true;
+
   String _activeCategory = 'All';
-  
-  final List<String> _categories = ['All', 'Ghanti', 'Puja Samagri', 'Tika', 'Karuwa'];
 
-  // Realistic mock data maps representing images/prices from your layout mockup
-  final List<Map<String, dynamic>> _mockProducts = [
-    {'title': 'Sukunda Brass Vase\nlorem lorem', 'price': '9999AUD', 'image': 'https://picsum.photos/id/1080/300/300', 'isBell': false},
-    {'title': 'Pooja Bell (Ghanti)\nlorem lorem', 'price': '450AUD', 'image': 'https://picsum.photos/id/1025/300/300', 'isBell': true},
-    {'title': 'Asthadhatu Karuwa\nlorem lorem', 'price': '1200AUD', 'image': 'https://picsum.photos/id/1080/300/300', 'isBell': false},
-    {'title': 'Traditional Tika Set\nlorem lorem', 'price': '150AUD', 'image': 'https://picsum.photos/id/1025/300/300', 'isBell': true},
-  ];
+ List<Map<String, dynamic>> _categories = [];
+List<Map<String, dynamic>> _popularItems = [];
+List<Map<String, dynamic>> _featuredItems = [];
 
+  @override
+  void initState() {
+    super.initState();
+    _loadShop();
+  }
+
+  Future<void> _loadShop() async {
+  print("Loading shop...");
+
+  try {
+    _categories = await _shopService.getCategories();
+    print("Categories Loaded: ${_categories.length}");
+
+    _popularItems = await _shopService.getPopularProducts();
+    print("Popular Loaded: ${_popularItems.length}");
+
+    _featuredItems = await _shopService.getFeaturedProducts();
+    print("Featured Loaded: ${_featuredItems.length}");
+
+    print("First Featured:");
+    if (_featuredItems.isNotEmpty) {
+      print(_featuredItems.first);
+    }
+
+    setState(() {
+      _loading = false;
+    });
+  } catch (e, stack) {
+    print("SHOP ERROR:");
+    print(e);
+    print(stack);
+
+    setState(() {
+      _loading = false;
+    });
+  }
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,91 +72,144 @@ class _ShopScreenState extends State<ShopScreen> {
         title: 'Mero Guru',
         style: NavBarStyle.BrandedLight,
         showMenu: true,
-        actions: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.shopping_cart_outlined, color: AppColors.textDark),
-                onPressed: () {},
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(color: AppColors.orangeMain, shape: BoxShape.circle),
-                  constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
-                  child: const Text('1', style: TextStyle(color: Colors.white, fontSize: 8), textAlign: TextAlign.center),
-                ),
-              )
-            ],
-          ),
-        ],
+        showCart: true,
       ),
-      body: SingleChildScrollView(
+      body: _loading
+    ? const Center(
+        child: CircularProgressIndicator(),
+      )
+    : SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 12),
-            
-            // 1. Search Box Component File
+
             ShopSearchBanner(
               onSearchChanged: (query) {},
               onFilterTap: () {},
             ),
+
             const SizedBox(height: 16),
-            
-            // 2. Category Pill Tags Row Component File
+
             ShopCategoryScroller(
-              categories: _categories,
+              categories: [
+                'All',
+                ..._categories.map((e) => e['name'].toString()),
+              ],
               selectedCategory: _activeCategory,
-              onCategorySelected: (category) {
-                setState(() => _activeCategory = category);
+              onCategorySelected: (category) async {
+                print("Category Selected: $category");
+                setState(() {
+                  _activeCategory = category;
+                });
+
+                if (category == 'All') {
+                  final items =
+                      await _shopService.getFeaturedProducts();
+
+                  setState(() {
+                    _featuredItems = items;
+                  });
+                } else {
+                  final slug = _categories.firstWhere(
+                    (e) => e['name'] == category,
+                  )['slug'];
+                  print("Slug: $slug");
+
+                  final items =
+                      await _shopService.getProducts(category: slug);
+                      print(items);
+
+                  setState(() {
+                    _featuredItems = items;
+                  });
+                }
               },
             ),
+
             const SizedBox(height: 24),
-            
-            const Text('Popular Items', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
-            const SizedBox(height: 12),
-            
-            // 3. Carousel Horizontal Items Strip Component File
-            PopularItemsCarousel(
-              items: _mockProducts,
-              onItemTap: (selectedItem) {},
+
+            const Text(
+              'Popular Items',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
             ),
-            const SizedBox(height: 24),
-            
-            const Text('Featured Items', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textDark)),
+
             const SizedBox(height: 12),
-            
-            // 4. Multi-column Infinite Featured Grid view layout mapping individual product cards
+
+            PopularItemsCarousel(
+              items: _popularItems,
+              onItemTap: (item) {
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.itemDetail,
+                  arguments: item['slug'],
+                );
+              },
+            ),
+
+            const SizedBox(height: 24),
+
+            Text(
+              _activeCategory == 'All'
+                  ? 'Featured Items'
+                  : _activeCategory,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textDark,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
             GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 2,
                 childAspectRatio: 0.74,
                 crossAxisSpacing: 12,
                 mainAxisSpacing: 12,
               ),
-              itemCount: 6,
+              itemCount: _featuredItems.length,
               itemBuilder: (context, index) {
-                final product = _mockProducts[index % _mockProducts.length];
-                return ProductCard(
-                  title: product['title'],
-                  priceString: product['price'],
-                  imagePathUrl: product['image'],
+                final product = _featuredItems[index];
+
+                final image = (product['images'] as List).isNotEmpty
+                    ? product['images'][0]
+                    : '';
+
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.pushNamed(
+                      context,
+                      AppRoutes.itemDetail,
+                      arguments: product['slug'],
+                    );
+                  },
+                  child: ProductCard(
+                    title: product['name'],
+                    priceString:
+                        '\$${product['discounted_price'] ?? product['price']}',
+                    imagePathUrl: image,
+                  ),
                 );
               },
             ),
+
             const SizedBox(height: 20),
           ],
         ),
       ),
-      // Uses your rewritten universal navigation component (index 2 for Shop highlights)
-      bottomNavigationBar: const CustomBottomNavBar(activeIndex: 2),
+      bottomNavigationBar: const CustomBottomNavBar(
+        activeIndex: 2,
+      ),
     );
   }
 }

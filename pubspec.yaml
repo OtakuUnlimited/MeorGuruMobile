@@ -45,6 +45,8 @@ dependencies:
   image_picker: ^1.1.2
   flutter_stripe: ^13.1.0
   intl: ^0.20.3
+  syncfusion_flutter_pdfviewer: ^32.1.19
+  nepali_utils: ^3.0.8
 
 dev_dependencies:
   flutter_test:

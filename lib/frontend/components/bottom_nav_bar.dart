@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../constants.dart';
-import '../pages/home_screen.dart';
-import '../pages/find_gurus_screen.dart';
+import '../../routes/app_routes.dart';
 import 'services_drawer_page.dart';
+
 
 class CustomBottomNavBar extends StatelessWidget {
   final int activeIndex;
@@ -13,47 +13,46 @@ class CustomBottomNavBar extends StatelessWidget {
   }) : super(key: key);
 
   void _navigateToPage(BuildContext context, int index) {
-    if (index == 3) {
-      // Index 3 represents the Services tab. 
-      // Open the Drawer panel sheet that automatically closes when tapping outside.
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        barrierColor: Colors.black.withOpacity(0.5), // Semi-transparent overlay backdrop
-        builder: (context) => const FractionallySizedBox(
-          heightFactor: 0.2, // Adjusts sheet display height
-          child: ServicesDrawerPage(),
-        ),
-      );
-      return;
-    }
-
-    if (index == activeIndex) return;
-
-    Widget targetedScreen;
-    switch (index) {
-      case 0:
-        targetedScreen = const HomeScreen();
-        break;
-      case 4:
-        targetedScreen = const FindGurusScreen();
-        break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Tab $index selected (Coming Soon!)")),
-        );
-        return;
-    }
-
-    Navigator.pushReplacement(
-      context,
-      PageRouteBuilder(
-        pageBuilder: (_, __, ___) => targetedScreen,
-        transitionDuration: Duration.zero,
+  if (index == 3) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      barrierColor: Colors.black.withOpacity(0.5),
+      builder: (_) => const FractionallySizedBox(
+        heightFactor: 0.2,
+        child: ServicesDrawerPage(),
       ),
     );
+    return;
   }
+
+  if (index == activeIndex) return;
+
+  String? route;
+
+  switch (index) {
+    case 0:
+      route = AppRoutes.home;
+      break;
+
+    case 1:
+      route = AppRoutes.patro;
+      break;
+
+    case 2:
+      route = AppRoutes.shop;
+      break;
+
+    case 4:
+      route = AppRoutes.guru;
+      break;
+  }
+
+  if (route != null) {
+    Navigator.pushReplacementNamed(context, route);
+  }
+}
 
   @override
   Widget build(BuildContext context) {

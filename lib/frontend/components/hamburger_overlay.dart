@@ -117,7 +117,7 @@ class HamburgerOverlay extends StatelessWidget {
                                   Navigator.pop(context);
                                   Navigator.pushNamed(
                                     context,
-                                    '/astrology',
+                                    AppRoutes.astrology,
                                   );
                                 },
                               ),
@@ -143,7 +143,7 @@ class HamburgerOverlay extends StatelessWidget {
                                   Navigator.pop(context);
                                   Navigator.pushNamed(
                                     context,
-                                    '/blogs',
+                                    AppRoutes.blogs,
                                   );
                                 },
                               ),
@@ -156,7 +156,7 @@ class HamburgerOverlay extends StatelessWidget {
                                   Navigator.pop(context);
                                   Navigator.pushNamed(
                                     context,
-                                    '/online-puja',
+                                    AppRoutes.onlinePuja,
                                   );
                                 },
                               ),
@@ -169,7 +169,7 @@ class HamburgerOverlay extends StatelessWidget {
                                   Navigator.pop(context);
                                   Navigator.pushNamed(
                                     context,
-                                    '/shop',
+                                    AppRoutes.shop,
                                   );
                                 },
                               ),
@@ -182,7 +182,7 @@ class HamburgerOverlay extends StatelessWidget {
                                   Navigator.pop(context);
                                   Navigator.pushNamed(
                                     context,
-                                    '/patro',
+                                    AppRoutes.patro,
                                   );
                                 },
                               ),
@@ -208,7 +208,7 @@ class HamburgerOverlay extends StatelessWidget {
                                   Navigator.pop(context);
                                   Navigator.pushNamed(
                                     context,
-                                    '/profile',
+                                    AppRoutes.profile,
                                   );
                                 },
                               ),

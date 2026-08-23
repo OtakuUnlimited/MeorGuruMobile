@@ -11,8 +11,16 @@ import '../frontend/pages/services_details_screen.dart';
 import '../frontend/pages/services_page_screen.dart';
 import '../frontend/pages/otp_verification_screen.dart';
 import '../frontend/pages/basic_details_screen.dart';
+import '../frontend/pages/blogs_screen.dart';
+import '../frontend/pages/blog_details.dart';
 
+import '../frontend/pages/patro_screen.dart';
 
+import '../frontend/pages/event_packages_screen.dart';
+import '../frontend/pages/event_packages_detail_screen.dart';
+import '../frontend/pages/event_packages_order_screen.dart';
+
+import '../frontend/pages/auspicious_calender.dart';
 
 
 // New E-Commerce Page Imports
@@ -41,7 +49,15 @@ class AppRoutes {
   static const guru = '/guru';
   static const otpVerification = '/otp-verification';
   static const basicDetails = '/basic-details';
+  static const blogs = '/blogs';
+  static const blogDetails = '/blog-details';
 
+  static const patro = '/patro';
+  static const auspiciousCalender = '/auspicious-calender';
+
+  static const String eventPackages = '/event-packages';
+  static const String eventPackagesDetail = '/event-packages-detail';
+  static const String eventPackagesOrder = '/event-packages-order';
   static const String astrology = '/astrology';
   static const String astrologyDetail = '/astrology-detail';
   static const String astrologyOrder = '/astrology-order';
@@ -59,6 +75,24 @@ class AppRoutes {
   static const String onlinePujaOrder = '/online-puja-order';
   static Route<dynamic>? onGenerateRoute(RouteSettings settings) {
   switch (settings.name) {
+    case blogDetails:
+      final slug = settings.arguments as String;
+
+      return MaterialPageRoute(
+        builder: (_) => BlogDetailScreen(slug: slug),
+      );
+    case eventPackagesDetail:
+      final slug = settings.arguments as String;
+
+      return MaterialPageRoute(
+        builder: (_) => EventPackagesDetailScreen(slug: slug),
+      );
+    case itemDetail:
+      final slug = settings.arguments as String;
+
+      return MaterialPageRoute(
+        builder: (_) => ItemDetailScreen(slug: slug),
+      );
     case astrologyDetail:
       final slug = settings.arguments as String;
 
@@ -71,6 +105,15 @@ class AppRoutes {
 
       return MaterialPageRoute(
         builder: (_) => OnlinePujaDetailScreen(slug: slug),
+      );
+
+    case eventPackagesOrder:
+      final args = settings.arguments as Map<String, dynamic>;
+
+      return MaterialPageRoute(
+        builder: (_) => EventPackagesOrderScreen(
+          eventPackageData: args,
+        ),
       );
 
     case onlinePujaOrder:
@@ -142,16 +185,19 @@ class AppRoutes {
     register: (_) => const RegisterScreen(),
     profile: (_) => const ProfileScreen(),
     settings: (_) => const SettingsScreen(),
+    blogs: (_) => const BlogsScreen(),
+    patro: (_) => const PatroScreen(),
+    auspiciousCalender: (_) => const AuspiciousCalender(),
     // decorationServices: (_) => const DecorationServicesScreen(),
     guru: (_) => const FindGurusScreen(),
     astrology: (_) => const AstrologyScreen(),
+    eventPackages: (_) => const EventPackagesScreen(),
     // Services Detail Route
     bookings: (_) => const BookingsScreen(),
     onlinePuja: (_) => const OnlinePujaScreen(),
 
     // New E-Commerce View Mapping
     shop: (_) => const ShopScreen(),
-    itemDetail: (_) => const ItemDetailScreen(),
     cart: (_) => const CartScreen(),
     checkout: (_) => const CheckOutScreen(),
   };

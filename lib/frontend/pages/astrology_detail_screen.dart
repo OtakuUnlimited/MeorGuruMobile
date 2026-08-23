@@ -130,7 +130,7 @@ class _AstrologyDetailScreenState
 
           Center(
             child: Text(
-              "Price: Rs ${data['price']}",
+              "Price: \$${data['price']}",
               style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,

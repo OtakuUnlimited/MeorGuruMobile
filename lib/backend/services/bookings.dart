@@ -3,36 +3,50 @@ import 'api_client.dart';
 final ApiClient _client = ApiClient();
 
 Future<dynamic> createAstrologyBooking({
+  int? userId,
   required int astrologyId,
   required String orderFor,
-  required String fullName,
-  required String dob,
-  required String placeOfBirth,
-  required String gender,
+  required List<Map<String, dynamic>> individuals,
   required String customerName,
   required String customerEmail,
   required String customerPhone,
+  String? customerCountryCode,
   required String deliveryCountry,
+  String? deliveryState,
+  String? deliverySuburb,
   required String deliveryAddress,
   required String postCode,
-  required String amount,
+  required String fatherGotra,
+  required String fatherBirthName,
+  required String motherBirthName,
+  required bool terms,
+  String? amount,
+  String? note,
+  String? payBy,
 }) async {
   return await _client.post(
-    'mobile/astrology/booking',
+    'astrology/booking',
     {
+      'user_id': userId,
       'astrology_id': astrologyId,
       'order_for': orderFor,
-      'full_name': fullName,
-      'dob': dob,
-      'place_of_birth': placeOfBirth,
-      'gender': gender,
+      'individuals': individuals,
       'customer_name': customerName,
       'customer_email': customerEmail,
       'customer_phone': customerPhone,
+      'customer_country_code': customerCountryCode,
       'delivery_country': deliveryCountry,
+      'delivery_state': deliveryState,
+      'delivery_suburb': deliverySuburb,
       'delivery_address': deliveryAddress,
       'post_code': postCode,
       'amount': amount,
+      'note': note,
+      'father_gotra': fatherGotra,
+      'father_birth_name': fatherBirthName,
+      'mother_birth_name': motherBirthName,
+      'pay_by': payBy,
+      'terms': terms ? '1' : null,
     },
   );
 }
@@ -58,7 +72,7 @@ Future<dynamic> createPujaBooking({
   String? note,
 }) async {
   return await _client.post(
-    'mobile/puja/booking',
+    'puja/booking',
     {
       'puja_id': pujaId,
       'puja_booking_for': bookingFor,
@@ -82,32 +96,32 @@ Future<dynamic> createPujaBooking({
   );
 }
 
-Future<dynamic> createEventBooking({
+Future<dynamic> storeEventBooking({
   required int eventId,
   required String eventName,
-  required String bookingFor,
+  required String pujaBookingFor,
   required String eventDate,
-  required String startTime,
-  required String endTime,
+  required String eventStartTime,
+  required String eventEndTime,
   required String customerName,
   required String customerEmail,
   required String customerPhone,
-  required String country,
-  required String amount,
+  required String eventCountry,
+  required double amount,
 }) async {
   return await _client.post(
-    'mobile/event/booking',
+    'store_event_booking',
     {
       'event_id': eventId,
       'event_name': eventName,
-      'puja_booking_for': bookingFor,
+      'puja_booking_for': pujaBookingFor,
       'event_date': eventDate,
-      'event_start_time': startTime,
-      'event_end_time': endTime,
+      'event_start_time': eventStartTime,
+      'event_end_time': eventEndTime,
       'customer_name': customerName,
       'customer_email': customerEmail,
       'customer_phone': customerPhone,
-      'event_country': country,
+      'event_country': eventCountry,
       'amount': amount,
     },
   );

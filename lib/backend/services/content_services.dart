@@ -48,12 +48,13 @@ Future<dynamic> fetchPujaDetails(String slug) async {
   return await _client.get('online-puja/$slug');
 }
 
-Future<List<dynamic>> fetchEvents() async {
+Future<List<Map<String, dynamic>>> fetchEvents() async {
   try {
-    final response =
-        await _client.get('events/list');
+    final response = await _client.get('events/list');
 
-    final data = response['data'] ?? [];
+    final data = List<Map<String, dynamic>>.from(
+      response['data'] ?? [],
+    );
 
     await CacheService.save(
       CacheKeys.events,
@@ -62,8 +63,8 @@ Future<List<dynamic>> fetchEvents() async {
 
     return data;
   } catch (e) {
-    return CacheService.getList(
-      CacheKeys.events,
+    return List<Map<String, dynamic>>.from(
+      await CacheService.getList(CacheKeys.events),
     );
   }
 }
@@ -144,6 +145,33 @@ Future<List<dynamic>> refreshCategories() async {
   }
 }
 
+Future<List<Map<String, dynamic>>> getBlogs() async {
+    try {
+      final response = await _client.get('blogs');
+
+      if (response['status'] == 200 &&
+          response['data'] is List) {
+        return List<Map<String, dynamic>>.from(
+          response['data'],
+        );
+      }
+
+      return [];
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchBlogDetails(String slug) async {
+  final response = await _client.get('blog-details/$slug');
+
+  if (response['status'] == 200) {
+    return response['data'];
+  }
+
+  throw Exception('Failed to load blog');
+}
+
 //services
  Future<List<dynamic>> fetchServices() async {
   try {
@@ -168,22 +196,18 @@ Future<List<dynamic>> refreshCategories() async {
 
 //patro
 
-  Future<dynamic> fetchPatroData() async {
-  try {
-    final response =
-        await _client.get('get-patro');
+  Future<List<Map<String, dynamic>>> fetchPatroData() async {
+  final response = await _client.get(
+    'get-patro',
+  );
 
-    await CacheService.save(
-      CacheKeys.patro,
-      response,
-    );
-
-    return response;
-  } catch (e) {
-    return CacheService.getObject(
-      CacheKeys.patro,
+  if (response['status'] == 200) {
+    return List<Map<String, dynamic>>.from(
+      response['data'] ?? [],
     );
   }
+
+  throw Exception('Failed to load Patro');
 }
 
 //guru
@@ -271,6 +295,71 @@ Future<List<dynamic>> refreshCategories() async {
       CacheKeys.countries,
     );
   }
+}
+
+Future<List<dynamic>> fetchAllRituals() async {
+  try {
+    final response = await _client.get('get_all_ritual');
+    final data = List<dynamic>.from(response['data'] ?? []);
+
+    await CacheService.save(CacheKeys.auspiciousRituals, data);
+    return data;
+  } catch (e) {
+    return CacheService.getList(CacheKeys.auspiciousRituals);
+  }
+}
+
+Future<List<dynamic>> fetchAuspiciousYears() async {
+  try {
+    final response = await _client.get('get_all_year');
+    final data = List<dynamic>.from(response['data'] ?? []);
+
+    await CacheService.save(CacheKeys.auspiciousYears, data);
+    return data;
+  } catch (e) {
+    return CacheService.getList(CacheKeys.auspiciousYears);
+  }
+}
+
+Future<List<dynamic>> fetchAuspiciousMonths() async {
+  try {
+    final response = await _client.get('get_all_month');
+    final data = List<dynamic>.from(response['data'] ?? []);
+
+    await CacheService.save(CacheKeys.auspiciousMonths, data);
+    return data;
+  } catch (e) {
+    return CacheService.getList(CacheKeys.auspiciousMonths);
+  }
+}
+
+Future<List<dynamic>> fetchRitualAuspiciousDates({
+  required int ritualId,
+  required int countryId,
+  required String year,
+  required String month,
+}) async {
+  final response = await _client.post(
+    'get_ritual_auspicious_dates',
+    {
+      'ritual_id': ritualId,
+      'country_id': countryId,
+      'year': year,
+      'month': month,
+    },
+  );
+
+  if (response['status'] == 200) {
+    // Supports either {status, data:[...]} or
+    // {status, dates:[...]} from the Laravel controller.
+    return List<dynamic>.from(
+      response['data'] ?? response['dates'] ?? [],
+    );
+  }
+
+  throw Exception(
+    response['message'] ?? 'Failed to load auspicious dates',
+  );
 }
 
 Future<dynamic> saveBasicDetails({

@@ -34,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
         style: NavBarStyle.BrandedLight,
         showMenu: true,
         showProfile: true,
+        showCart: true,
       ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
@@ -52,36 +53,64 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
 
             CategoryGridView(),
+             SizedBox(height: 20),   
+           /// ONLINE PUJA + VERIFIED GURUS GRADIENT SECTION
+            Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                  Color(0xFFFFA663),
+                  Color(0xFFFFC9A8),
+                  Color(0xFFFBFBFB),
+                  ],
+                  stops: [
+                    0.0,
+                  0.55,
+                  1.0,
+                  ],
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
 
-            SizedBox(height: 20),
+                  /// ONLINE PUJA
+                  SectionHeader(
+                    title: "Online Puja Services",
+                    onViewAll: () {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.onlinePuja,
+                      );
+                    },
+                  ),
 
-            /// ONLINE PUJA
-            SectionHeader(
-              title: "Online Puja Services",
-              onViewAll: () {
-                Navigator.pushNamed(
-                  context,
-                  '/online-puja',
-                );
-              },
+                  OnlinePujaSection(),
+
+                  const SizedBox(height: 25),
+
+                  /// VERIFIED GURUS
+                  SectionHeader(
+                    title: "Our Verified Gurus",
+                    onViewAll: () {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.guru,
+                      );
+                    },
+                  ),
+
+                  VerifiedGuruSection(),
+
+                  const SizedBox(height: 35),
+                ],
+              ),
             ),
-
-            OnlinePujaSection(),
-
-            SizedBox(height: 20),
-
-            /// VERIFIED GURUS
-            SectionHeader(
-              title: "Our Verified Gurus",
-              onViewAll: () {
-                Navigator.pushNamed(
-                  context,
-                  '/guru',
-                );
-              },
-            ),
-
-            VerifiedGuruSection(),
 
             SizedBox(height: 20),
 
@@ -124,6 +153,12 @@ class _HomeScreenState extends State<HomeScreen> {
             /// BLOGS
             SectionHeader(
               title: "MeroGuru Blog",
+              onViewAll: () {
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.blogs,
+                );
+              },
             ),
 
             BlogSection(),

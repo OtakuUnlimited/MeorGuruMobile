@@ -70,6 +70,20 @@ class ServicesDrawerPage extends StatelessWidget {
 
                       _buildDrawerIcon(
                         context,
+                        Icons.celebration_outlined,
+                        "Event\nManagement",
+                        () {
+                          Navigator.pop(context);
+
+                           Navigator.pushNamed(
+                            context,
+                            AppRoutes.eventPackages,
+                          );
+                        },
+                      ),
+
+                      _buildDrawerIcon(
+                        context,
                         Icons.calendar_today,
                         "Auspicious\nDays",
                         () {
@@ -77,7 +91,7 @@ class ServicesDrawerPage extends StatelessWidget {
 
                           Navigator.pushNamed(
                             context,
-                            '/auspicious-days',
+                            AppRoutes.auspiciousCalender,
                           );
                         },
                       ),

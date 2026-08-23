@@ -212,27 +212,29 @@ Future<dynamic> get(
   }
 
   // DELETE Request
-  Future<dynamic> delete(
-    String endpoint, {
-    bool requireAuth = false,
-  }) async {
-    final url = Uri.parse('$baseUrl/$endpoint');
+ Future<dynamic> delete(
+  String endpoint,
+  Map<String, dynamic> body, {
+  bool requireAuth = false,
+}) async {
+  final url = Uri.parse('$baseUrl/$endpoint');
 
-    try {
-      final response = await http.delete(
-        url,
-        headers: _getHeaders(
-          requireAuth: requireAuth,
-        ),
-      );
+  try {
+    final response = await http.delete(
+      url,
+      headers: _getHeaders(
+        requireAuth: requireAuth,
+      ),
+      body: jsonEncode(body),
+    );
 
-      return _processResponse(response);
-    } catch (e) {
-      throw Exception(
-        "Network request failed: $e",
-      );
-    }
+    return _processResponse(response);
+  } catch (e) {
+    throw Exception(
+      "Network request failed: $e",
+    );
   }
+}
 
   Future<dynamic> multipartPost(
   String endpoint,
@@ -299,4 +301,7 @@ Future<dynamic> get(
           : response.body,
     );
   }
+
+  
 }
+

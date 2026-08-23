@@ -7,14 +7,17 @@ import '../searchable_country_dropdown.dart';
 import '../searchable_state_dropdown.dart';
 import '../gotra_dropdown.dart';
 import '../models/personal_details.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class AstrologyForm extends StatefulWidget {
   final VoidCallback onPaymentSubmit;
   final Map<String, dynamic> astrologyData;
+  final int? userId;
   const AstrologyForm({
   Key? key,
   required this.onPaymentSubmit,
   required this.astrologyData,
+  this.userId,
 }) : super(key: key); 
 
   
@@ -97,102 +100,84 @@ final TextEditingController customerPhoneController =
 
 
 
-  Future<void> checkPaymentStatus(
-    int bookingId) async {
-
-  for (int i = 0; i < 10; i++) {
-
-    await Future.delayed(
-      const Duration(seconds: 2),
-    );
-
-    final response = await _client.get(
-      'mobile/payment-status/$bookingId',
-    );
-
-    if (response['payment_status'] == "Paid") {
-
-      if (!mounted) return;
-
-      Navigator.pushReplacementNamed(
-        context,
-        '/payment-success',
-      );
-
-      return;
-    }
-  }
-
-  if (!mounted) return;
-
-  ScaffoldMessenger.of(context).showSnackBar(
-
-    const SnackBar(
-
-      content: Text(
-        "Payment verification timed out.",
-      ),
-
-    ),
-
-  );
-}
-    
-
-
-    Future<void> submitBooking() async {
-  print("========== SUBMIT BOOKING ==========");
+  Future<void> submitBooking() async {
 
   try {
     setState(() {
       _isSubmitting = true;
     });
-
-
    
-    final body = {
-      'astrology_id': widget.astrologyData['id'],
-      'order_for': _orderForCount,
+    for (int i = 0; i < people.length; i++) {
+      final person = people[i];
+    
+    }
 
-      // TEMPORARILY send first person only
-      'full_name': people.first.fullNameController.text,
-      'gender': people.first.gender,
-      'dob': people.first.dobController.text,
-      'place_of_birth': people.first.birthPlaceController.text,
-      'birth_name': people.first.birthNameController.text,
+    final response = await createAstrologyBooking(
+  // Null when booking as a guest
+  userId: widget.userId,
 
-      'customer_name': customerNameController.text,
-      'customer_email': customerEmailController.text,
-      'customer_phone': customerPhoneController.text,
+  astrologyId: int.parse(
+    widget.astrologyData['id'].toString(),
+  ),
 
-      'delivery_country': deliveryCountry,
-      'delivery_state': deliveryState,
-      'delivery_address': deliveryAddressController.text,
-      'post_code': postCodeController.text,
+  orderFor: _orderForCount,
 
-      'amount': widget.astrologyData['price'],
+  individuals: people.map((person) {
+    return {
+      'full_name': person.fullNameController.text.trim(),
+      'gender': person.gender,
+      'dob': person.dobController.text.trim(),
+      'birth_hour': person.birthHour,
+      'birth_minute': person.birthMinute,
+      'birth_country': person.birthCountry,
+      'birth_place': person.birthPlaceController.text.trim(),
+      'birth_name': person.birthNameController.text.trim(),
     };
+  }).toList(),
+
+  customerName: customerNameController.text.trim(),
+  customerEmail: customerEmailController.text.trim(),
+  customerPhone: customerPhoneController.text.trim(),
+  customerCountryCode: _selectedCountry,
+
+  deliveryCountry: deliveryCountry ?? '',
+  deliveryState: deliveryState,
+  deliverySuburb: suburbController.text.trim(),
+  deliveryAddress: deliveryAddressController.text.trim(),
+  postCode: postCodeController.text.trim(),
+
+  fatherGotra: selectedGotra ?? '',
+  fatherBirthName: fatherBirthNameController.text.trim(),
+  motherBirthName: motherBirthNameController.text.trim(),
+
+  note: notesController.text.trim(),
+  amount: widget.astrologyData['price']?.toString(),
+  payBy: 'stripe',
+  terms: _agreedToTerms,
+);
 
     print("------ REQUEST BODY ------");
-    print(body);
 
     print("Calling API...");
 
-    final response = await _client.post(
-      'mobile/astrology/booking',
-      body,
-    );
+   
 
     print("API SUCCESS");
     print(response);
 
-    final bookingId = response['booking_id'];
-    final clientSecret = response['client_secret'];
+    final stripeUrl = response['stripe_url'];
 
-    await _makePayment(
-      clientSecret,
-      bookingId,
-    );
+    print("Stripe URL: $stripeUrl");
+
+    if (stripeUrl != null) {
+      print("Launching Stripe...");
+      await launchUrl(
+        Uri.parse(stripeUrl),
+        mode: LaunchMode.inAppBrowserView,
+      );
+    } else {
+      print("No stripe_url returned.");
+    }
   } catch (e, stackTrace) {
     print("========== ERROR ==========");
     print(e);
@@ -208,102 +193,6 @@ final TextEditingController customerPhoneController =
       _isSubmitting = false;
     });
   }
-}
-
-
-Future<void> _makePayment(
-  String clientSecret,
-  int bookingId,
-) async {
-
-  try {
-
-    await stripe.Stripe.instance.initPaymentSheet(
-
-      paymentSheetParameters:
-
-          stripe.SetupPaymentSheetParameters(
-
-        merchantDisplayName: 'Mero Guru',
-
-        paymentIntentClientSecret: clientSecret,
-
-      ),
-
-    );
-
-    await stripe.Stripe.instance.presentPaymentSheet();
-
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-
-      const SnackBar(
-
-        content: Text("Payment Successful"),
-
-        backgroundColor: Colors.green,
-
-      ),
-
-    );
-
-  Future<bool> checkPaymentStatus(int bookingId) async {
-  final response = await _client.get(
-    'mobile/payment-status/$bookingId',
-  );
-
-  if (response['payment_status'] == 'Paid') {
-    return true;
-  }
-
-  return false;
-}
-
-for (int i = 0; i < 10; i++) {
-  await Future.delayed(const Duration(seconds: 2));
-
-  final paid = await checkPaymentStatus(bookingId);
-
-  if (paid) {
-    if (!mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Payment Verified"),
-        backgroundColor: Colors.green,
-      ),
-    );
-
-    break;
-  }
-}
-
-  } on stripe.StripeException catch (e) {
-
-    ScaffoldMessenger.of(context).showSnackBar(
-
-      SnackBar(
-
-        content: Text(
-          e.error.localizedMessage ??
-              "Payment Cancelled",
-        ),
-
-      ),
-
-    );
-
-  }  on stripe.StripeConfigException catch (e) {
-  print("Stripe Config Exception");
-  print(e);
-  print(e.message);
-  rethrow;
-} on stripe.StripeException catch (e) {
-  print("Stripe Exception");
-  print(e.error);
-  rethrow;
-}
 }
 
 @override

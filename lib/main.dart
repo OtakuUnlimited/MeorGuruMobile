@@ -4,6 +4,7 @@ import 'constants.dart';
 import 'routes/app_routes.dart';
 import 'backend/services/auth_service.dart';
 import 'package:flutter_stripe/flutter_stripe.dart' as stripe;
+import 'backend/services/cart_notifier.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -12,6 +13,7 @@ Future<void> main() async {
   // Replace with your Stripe publishable key
 
   await stripe.Stripe.instance.applySettings();
+  await cartNotifier.refresh();
 
   // Restore saved login token
   await AuthService.initializeAuth();

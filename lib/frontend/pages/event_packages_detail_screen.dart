@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
 import '../../backend/services/content_services.dart';
 import '../components/top_nav_bar.dart';
+import '../components/bottom_nav_bar.dart';
 import '../../routes/app_routes.dart';
 
-class OnlinePujaDetailScreen extends StatefulWidget {
+class EventPackagesDetailScreen extends StatefulWidget {
   final String slug;
 
-  const OnlinePujaDetailScreen({
+  const EventPackagesDetailScreen({
     super.key,
     required this.slug,
   });
 
   @override
-  State<OnlinePujaDetailScreen> createState() =>
-      _OnlinePujaDetailScreenState();
+  State<EventPackagesDetailScreen> createState() =>
+      _EventPackagesDetailScreenState();
 }
 
-class _OnlinePujaDetailScreenState
-    extends State<OnlinePujaDetailScreen> {
-
+class _EventPackagesDetailScreenState
+    extends State<EventPackagesDetailScreen> {
   final ContentService _contentService = ContentService();
 
   late Future<dynamic> _future;
@@ -27,7 +27,7 @@ class _OnlinePujaDetailScreenState
   void initState() {
     super.initState();
 
-    _future = _contentService.fetchPujaDetails(widget.slug);
+    _future = _contentService.fetchEventDetails(widget.slug);
   }
 
   @override
@@ -43,7 +43,6 @@ class _OnlinePujaDetailScreenState
       body: FutureBuilder<dynamic>(
         future: _future,
         builder: (context, snapshot) {
-
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(),
@@ -66,11 +65,13 @@ class _OnlinePujaDetailScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // ============================================================
+                // TITLE
+                // ============================================================
 
                 Center(
                   child: Text(
                     data['title'] ?? '',
-                    textAlign: TextAlign.center,
                     style: const TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
@@ -80,6 +81,10 @@ class _OnlinePujaDetailScreenState
                 ),
 
                 const SizedBox(height: 18),
+
+                // ============================================================
+                // IMAGE
+                // ============================================================
 
                 Center(
                   child: ClipRRect(
@@ -95,8 +100,14 @@ class _OnlinePujaDetailScreenState
 
                 const SizedBox(height: 24),
 
+                // ============================================================
+                // SHORT DESCRIPTION
+                // ============================================================
+
                 Text(
-                  data['short_description'] ?? '',
+                  _formatShortDescription(
+                    data['short_description'] ?? '',
+                  ),
                   style: const TextStyle(
                     fontSize: 14,
                     height: 1.5,
@@ -104,6 +115,10 @@ class _OnlinePujaDetailScreenState
                 ),
 
                 const SizedBox(height: 20),
+
+                // ============================================================
+                // DESCRIPTION TITLE
+                // ============================================================
 
                 const Text(
                   "Description",
@@ -114,6 +129,10 @@ class _OnlinePujaDetailScreenState
                 ),
 
                 const SizedBox(height: 10),
+
+                // ============================================================
+                // DESCRIPTION
+                // ============================================================
 
                 Text(
                   _removeHtmlTags(
@@ -127,6 +146,10 @@ class _OnlinePujaDetailScreenState
 
                 const SizedBox(height: 24),
 
+                // ============================================================
+                // PRICE
+                // ============================================================
+
                 Center(
                   child: Text(
                     "Price: \$${data['price']}",
@@ -139,6 +162,10 @@ class _OnlinePujaDetailScreenState
 
                 const SizedBox(height: 20),
 
+                // ============================================================
+                // BOOK NOW BUTTON
+                // ============================================================
+
                 SizedBox(
                   width: double.infinity,
                   height: 50,
@@ -149,7 +176,7 @@ class _OnlinePujaDetailScreenState
                     onPressed: () {
                       Navigator.pushNamed(
                         context,
-                        AppRoutes.onlinePujaOrder,
+                        AppRoutes.eventPackagesOrder,
                         arguments: data,
                       );
                     },
@@ -169,6 +196,46 @@ class _OnlinePujaDetailScreenState
       ),
     );
   }
+
+  // ============================================================
+  // FORMAT SHORT DESCRIPTION
+  // ============================================================
+
+  String _formatShortDescription(String description) {
+    String text = description.trim();
+
+    if (text.isEmpty) {
+      return '';
+    }
+
+    // Remove "Includes:" from the beginning
+    if (text.toLowerCase().startsWith('includes:')) {
+      text = text.substring('Includes:'.length).trim();
+    }
+
+    // Split the description by commas
+    final items = text
+        .split(',')
+        .map((item) => item.trim())
+        .where((item) => item.isNotEmpty)
+        .toList();
+
+    final buffer = StringBuffer();
+
+    // Add "Includes:" on its own line
+    buffer.writeln('Includes:');
+
+    // Add numbering
+    for (int i = 0; i < items.length; i++) {
+      buffer.writeln('${i + 1}. ${items[i]}');
+    }
+
+    return buffer.toString().trim();
+  }
+
+  // ============================================================
+  // REMOVE HTML TAGS
+  // ============================================================
 
   String _removeHtmlTags(String htmlText) {
     return htmlText
