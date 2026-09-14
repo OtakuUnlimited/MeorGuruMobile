@@ -56,6 +56,31 @@ class CacheService {
     }
   }
 
+  static Future<String?> getString(
+  String key,
+) async {
+  final prefs =
+      await SharedPreferences.getInstance();
+
+  final cached = prefs.getString(key);
+
+  if (cached == null || cached.isEmpty) {
+    return null;
+  }
+
+  try {
+    final decoded = jsonDecode(cached);
+
+    if (decoded is String) {
+      return decoded;
+    }
+  } catch (_) {
+    // The value was stored as a normal string.
+  }
+
+  return cached;
+}
+
   
   static Future<void> remove(
     String key,

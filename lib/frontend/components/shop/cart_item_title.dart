@@ -4,7 +4,8 @@ import 'shop_widgets.dart';
 
 class CartItemTile extends StatelessWidget {
   final String name;
-  final String priceString;
+  final String originalPriceString;
+  final String? discountedPriceString;
   final String imageUrl;
   final int quantity;
   final bool isSelected;
@@ -15,7 +16,8 @@ class CartItemTile extends StatelessWidget {
   const CartItemTile({
     Key? key,
     required this.name,
-    required this.priceString,
+    required this.originalPriceString,
+    this.discountedPriceString,
     required this.imageUrl,
     required this.quantity,
     required this.isSelected,
@@ -99,13 +101,31 @@ class CartItemTile extends StatelessWidget {
 
           const SizedBox(width: 8),
 
-          Text(
-            priceString,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (discountedPriceString != null) ...[
+                Text(
+                  originalPriceString,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    decoration:
+                        TextDecoration.lineThrough,
+                  ),
+                ),
+                const SizedBox(height: 2),
+              ],
+              Text(
+                discountedPriceString ??
+                    originalPriceString,
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.orangeMain,
+                ),
+              ),
+            ],
           ),
         ],
       ),

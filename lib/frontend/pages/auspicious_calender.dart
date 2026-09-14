@@ -3,6 +3,7 @@ import 'package:nepali_utils/nepali_utils.dart';
 
 import '../../backend/services/content_services.dart';
 import '../components/top_nav_bar.dart';
+import '../components/bottom_nav_bar.dart';
 
 class AuspiciousCalender extends StatefulWidget {
   const AuspiciousCalender({super.key});
@@ -29,6 +30,8 @@ class _Ritual {
         '${j['image'] ?? ''}',
       );
 }
+
+const _allRitual = _Ritual('all', 'All Rituals', '');
 
 class _Day {
   const _Day({
@@ -121,7 +124,7 @@ class _AuspiciousCalenderState extends State<AuspiciousCalender> {
         countries = newCountries;
         years = newYears;
         months = newMonths;
-        ritual = newRituals.firstOrNull;
+        ritual = _allRitual;
         country = newCountries.firstOrNull;
         year = findOption(newYears, '${DateTime.now().year}');
         month = findOption(newMonths, monthName(DateTime.now().month));
@@ -159,7 +162,7 @@ class _AuspiciousCalenderState extends State<AuspiciousCalender> {
     });
     try {
       final response = await contentService.fetchRitualAuspiciousDates(
-        ritualId: int.parse(ritual!.id),
+        ritualId: ritual!.id,
         countryId: int.parse(country!.value),
         year: year!.value,
         month: month!.value,
@@ -241,12 +244,18 @@ class _AuspiciousCalenderState extends State<AuspiciousCalender> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Auspicious Dates', style: TextStyle(color: orange, fontSize: 42, height: 1, fontWeight: FontWeight.w900)),
-                            const SizedBox(height: 22),
+                            const Text('Auspicious Dates', style: TextStyle(color: orange, fontSize: 28, fontWeight: FontWeight.w900)),
+                            const SizedBox(height: 20),
                             filters(),
                             if (error != null) errorBox(),
-                            const SizedBox(height: 25),
-                            Text('${monthName(shown.month)} ${shown.year}', style: const TextStyle(fontSize: 34, fontWeight: FontWeight.w900)),
+                            const SizedBox(height: 15),
+                            const Center(
+                              child: Text(
+                                'Auspicious dates for the rituals will be highlighted in green below',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(color: Color(0xFF388E3C), fontStyle: FontStyle.italic),
+                              ),
+                            ),
                             const SizedBox(height: 18),
                             if (loadingDates)
                               const SizedBox(height: 300, child: Center(child: CircularProgressIndicator(color: orange)))
@@ -254,16 +263,87 @@ class _AuspiciousCalenderState extends State<AuspiciousCalender> {
                               calendar(),
                               const SizedBox(height: 28),
                               details(),
-                              const SizedBox(height: 34),
-                              upcoming(),
                             ],
                           ],
                         ),
                       ),
                     ),
                   ),
+                  
                 ),
+                
         ),
+        bottomNavigationBar: const CustomBottomNavBar(
+        activeIndex: 3,
+      ),
+      );
+
+  Widget introSection() => Column(children: [
+        const Text(
+          'Auspicious Dates for Hindu Rituals and Celebration',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: orange, fontSize: 36, height: 1.15, fontWeight: FontWeight.w900),
+        ),
+        const SizedBox(height: 13),
+        const Text(
+          'Discover the best dates and times for rituals, festivals, and celebrations as per the Hindu Panchang. Plan your special moments with spiritual precision and confidence.',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Color(0xFF555555), fontSize: 16, height: 1.5),
+        ),
+        const SizedBox(height: 28),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 12,
+          children: const [
+            _StepPill('01', 'Select the Ritual'),
+            _StepPill('02', 'Select Country'),
+            _StepPill('03', 'Select Year'),
+            _StepPill('04', 'Select Month'),
+            _StepPill('05', 'Find Results'),
+          ],
+        ),
+      ]);
+
+  Widget popularRituals() => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(14, 30, 14, 34),
+        decoration: BoxDecoration(color: const Color(0xFFF7F7F7), borderRadius: BorderRadius.circular(18)),
+        child: Column(children: [
+          const Text('Popular Rituals', style: TextStyle(color: orange, fontSize: 28, fontWeight: FontWeight.w900)),
+          const SizedBox(height: 24),
+          LayoutBuilder(builder: (_, box) {
+            final columns = box.maxWidth >= 650 ? 4 : box.maxWidth >= 430 ? 3 : 2;
+            final cardWidth = (box.maxWidth - ((columns - 1) * 12)) / columns;
+            return Wrap(
+              spacing: 12,
+              runSpacing: 20,
+              children: rituals.map((item) {
+                final active = ritual?.id == item.id;
+                return InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () => setState(() => ritual = item),
+                  child: SizedBox(
+                    width: cardWidth,
+                    child: Column(children: [
+                      Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: active ? orange : Colors.transparent, width: 2.5),
+                        ),
+                        child: networkImage(item.image, cardWidth, 105),
+                      ),
+                      const SizedBox(height: 7),
+                      Text(item.title, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(color: active ? orange : const Color(0xFF333333), fontSize: 14, fontWeight: active ? FontWeight.w800 : FontWeight.w600)),
+                    ]),
+                  ),
+                );
+              }).toList(),
+            );
+          }),
+          
+        ]),
+        
       );
 
   Widget filters() => LayoutBuilder(builder: (_, box) {
@@ -277,7 +357,7 @@ class _AuspiciousCalenderState extends State<AuspiciousCalender> {
             width: box.maxWidth,
             height: 50,
             child: FilledButton.icon(
-              style: FilledButton.styleFrom(backgroundColor: orange, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFC3242B), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
               onPressed: canSearch ? loadDates : null,
               icon: const Icon(Icons.calendar_month),
               label: const Text('Show auspicious dates', style: TextStyle(fontWeight: FontWeight.w800)),
@@ -290,7 +370,7 @@ class _AuspiciousCalenderState extends State<AuspiciousCalender> {
         value: ritual,
         isExpanded: true,
         decoration: inputDecoration('Ritual'),
-        items: rituals.map((r) => DropdownMenuItem(
+        items: [_allRitual, ...rituals].map((r) => DropdownMenuItem(
           value: r,
           child: Row(children: [
             networkImage(r.image, 34, 34),
@@ -325,14 +405,25 @@ class _AuspiciousCalenderState extends State<AuspiciousCalender> {
     final leading = first.weekday % 7;
     final cells = ((leading + count + 6) ~/ 7) * 7;
     const headers = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    final firstBs = first.toNepaliDateTime();
+    final lastBs = DateTime(shown.year, shown.month, count).toNepaliDateTime();
+    final bsMonths = firstBs.month == lastBs.month
+        ? nepaliMonthName(firstBs.month)
+        : '${nepaliMonthName(firstBs.month)} / ${nepaliMonthName(lastBs.month)}';
+    final bsYears = firstBs.year == lastBs.year ? '${firstBs.year}' : '${firstBs.year} / ${lastBs.year}';
     return Column(children: [
-      Row(children: headers.map((d) => Expanded(child: Center(child: Text(d, style: const TextStyle(color: Color(0xFFBBBBBB), fontSize: 12, fontWeight: FontWeight.w800))))).toList()),
+      Row(children: [
+        Expanded(child: Text('${monthName(shown.month)} ${shown.year} (AD)', style: const TextStyle(color: ink, fontSize: 20, fontWeight: FontWeight.w800))),
+        Expanded(child: Text('$bsMonths $bsYears (BS)', textAlign: TextAlign.end, style: const TextStyle(color: Color(0xFF2C7A2C), fontSize: 17, fontWeight: FontWeight.w800))),
+      ]),
+      const SizedBox(height: 14),
+      Row(children: headers.asMap().entries.map((entry) => Expanded(child: Center(child: Text(entry.value, style: TextStyle(color: entry.key == 0 || entry.key == 6 ? Colors.red : const Color(0xFF555555), fontSize: 12, fontWeight: FontWeight.w800))))).toList()),
       const SizedBox(height: 12),
       GridView.builder(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: cells,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 7, crossAxisSpacing: 7, mainAxisSpacing: 7, childAspectRatio: .86),
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 7, crossAxisSpacing: 4, mainAxisSpacing: 4, childAspectRatio: .58),
         itemBuilder: (_, index) {
           final number = index - leading + 1;
           if (number < 1 || number > count) return const SizedBox.shrink();
@@ -340,65 +431,87 @@ class _AuspiciousCalenderState extends State<AuspiciousCalender> {
           final matches = dayMap[dateKey(date)] ?? const <_Day>[];
           final isSelected = sameDate(date, selected);
           final hasRitual = matches.isNotEmpty;
+          final isWeekend = date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
           final nepaliDate = date.toNepaliDateTime();
+          final serverBs = matches.firstOrNull?.bs ?? '';
+          final bsText = serverBs.isNotEmpty
+              ? formatBsDate(serverBs)
+              : '${nepaliDate.day} ${nepaliMonthName(nepaliDate.month)} ${nepaliDate.year}';
+          final ritualNames = matches.map((e) => e.name).where((e) => e.isNotEmpty).join(' / ');
           return InkWell(
             borderRadius: BorderRadius.circular(12),
             onTap: () => setState(() => selected = date),
             child: Container(
               decoration: BoxDecoration(
                 color: hasRitual
-                    ? red
+                    ? const Color(0xFFD4EDDA)
                     : isSelected
                         ? const Color(0xFFFFE9DF)
                         : tile,
-                borderRadius: BorderRadius.circular(12),
-                border: isSelected && !hasRitual
-                    ? Border.all(color: orange, width: 1.5)
-                    : null,
-              ),
-              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                Text('$number', style: TextStyle(color: hasRitual ? Colors.white : ink, fontSize: 20, height: 1, fontWeight: FontWeight.w900)),
-                const SizedBox(height: 7),
-                Text(
-                  '${nepaliDate.day}',
-                  style: TextStyle(
-                    color: hasRitual ? Colors.white : const Color(0xFFC42D00),
-                    fontSize: 12,
-                    height: 1,
-                    fontWeight: FontWeight.w600,
-                  ),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: hasRitual
+                      ? const Color(0xFF388E3C)
+                      : isSelected
+                          ? orange
+                          : const Color(0xFFD3D3D3),
+                  width: hasRitual || isSelected ? 1.5 : 1,
                 ),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 5),
+              child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+                Text('$number', style: TextStyle(color: hasRitual || isWeekend ? Colors.red : ink, fontSize: 20, height: 1, fontWeight: FontWeight.w900)),
+                const SizedBox(height: 5),
+                Text(bsText, textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFF555555), fontSize: 8.5, height: 1.15)),
+                if (hasRitual && ritualNames.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(ritualNames, textAlign: TextAlign.center, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFE80700), fontSize: 8, height: 1.1, fontWeight: FontWeight.w700)),
+                ],
               ]),
             ),
           );
         },
       ),
+      
     ]);
+    
   }
 
   Widget details() {
     final matches = dayMap[dateKey(selected)] ?? const <_Day>[];
     final convertedBs = selected.toNepaliDateTime();
     final convertedBsText = '${convertedBs.day} ${nepaliMonthName(convertedBs.month)} ${convertedBs.year}';
+    final hasRitual = matches.isNotEmpty;
+    final primaryMatch = matches.firstOrNull;
+    final displayedBs = primaryMatch?.bs.isNotEmpty == true
+        ? formatBsDate(primaryMatch!.bs)
+        : convertedBsText;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(27),
       decoration: BoxDecoration(color: const Color(0xFFFFFCFB), borderRadius: BorderRadius.circular(34), boxShadow: const [BoxShadow(color: Color(0x10000000), blurRadius: 15, offset: Offset(0, 5))]),
-      child: matches.isEmpty
-          ? const Padding(padding: EdgeInsets.symmetric(vertical: 30), child: Center(child: Text('No auspicious ritual on this date', style: TextStyle(color: muted, fontSize: 17))))
-          : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              badge('AUSPICIOUS DAY'),
-              const SizedBox(height: 15),
-              Text(
-                matches.first.bs.isNotEmpty ? formatBsDate(matches.first.bs) : convertedBsText,
-                style: const TextStyle(fontSize: 37, fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 7),
-              Text('${weekday(selected.weekday)}, ${monthName(selected.month)} ${selected.day}, ${selected.year}', style: const TextStyle(color: muted, fontSize: 17)),
-              const Padding(padding: EdgeInsets.symmetric(vertical: 23), child: Divider()),
-              Row(children: [Expanded(child: fact('TITHI', matches.first.tithi)), Expanded(child: fact('NAKSHATRA', matches.first.nakshatra))]),
-              const SizedBox(height: 22),
-              ...matches.map((r) => Container(
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        badge(hasRitual ? 'AUSPICIOUS DAY' : 'SELECTED DAY'),
+        const SizedBox(height: 15),
+        Text(displayedBs, style: const TextStyle(fontSize: 37, fontWeight: FontWeight.w900)),
+        const SizedBox(height: 7),
+        Text(
+          '${weekday(selected.weekday)}, ${monthName(selected.month)} ${selected.day}, ${selected.year}',
+          style: const TextStyle(color: muted, fontSize: 17),
+        ),
+        const SizedBox(height: 24),
+        if (!hasRitual)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(color: tile, borderRadius: BorderRadius.circular(22)),
+            child: const Row(children: [
+              Icon(Icons.event_available_outlined, color: muted),
+              SizedBox(width: 12),
+              Expanded(child: Text('No auspicious ritual recorded for this date.', style: TextStyle(color: muted))),
+            ]),
+          ),
+        ...matches.map((r) => Container(
                 margin: const EdgeInsets.only(top: 8),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(color: const Color(0xFFFFF2EE), borderRadius: BorderRadius.circular(22)),
@@ -411,7 +524,7 @@ class _AuspiciousCalenderState extends State<AuspiciousCalender> {
                   ])),
                 ]),
               )),
-            ]),
+      ]),
     );
   }
 
@@ -486,4 +599,32 @@ class _AuspiciousCalenderState extends State<AuspiciousCalender> {
 
 extension _FirstOrNull<T> on List<T> {
   T? get firstOrNull => isEmpty ? null : first;
+}
+
+class _StepPill extends StatelessWidget {
+  const _StepPill(this.number, this.text);
+
+  final String number;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Container(
+        padding: const EdgeInsets.fromLTRB(7, 7, 14, 7),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(50),
+          border: Border.all(color: _AuspiciousCalenderState.orange),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Container(
+            width: 31,
+            height: 31,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(color: _AuspiciousCalenderState.orange, shape: BoxShape.circle),
+            child: Text(number, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
+          ),
+          const SizedBox(width: 9),
+          Text(text, style: const TextStyle(color: Color(0xFF333333), fontWeight: FontWeight.w700)),
+        ]),
+      );
 }

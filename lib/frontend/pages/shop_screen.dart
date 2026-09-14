@@ -20,6 +20,7 @@ class _ShopScreenState extends State<ShopScreen> {
   final ShopService _shopService = ShopService();
 
   bool _loading = true;
+  bool _productsLoading = false;
 
   String _activeCategory = 'All';
 
@@ -34,36 +35,87 @@ List<Map<String, dynamic>> _featuredItems = [];
   }
 
   Future<void> _loadShop() async {
-  print("Loading shop...");
-
   try {
-    _categories = await _shopService.getCategories();
-    print("Categories Loaded: ${_categories.length}");
+    final results = await Future.wait([
+      _shopService.getCategories(),
+      _shopService.getPopularProducts(),
+      _shopService.getProducts(),
+    ]);
 
-    _popularItems = await _shopService.getPopularProducts();
-    print("Popular Loaded: ${_popularItems.length}");
-
-    _featuredItems = await _shopService.getFeaturedProducts();
-    print("Featured Loaded: ${_featuredItems.length}");
-
-    print("First Featured:");
-    if (_featuredItems.isNotEmpty) {
-      print(_featuredItems.first);
-    }
+    if (!mounted) return;
 
     setState(() {
+      _categories =
+          results[0] as List<Map<String, dynamic>>;
+
+      _popularItems =
+          results[1] as List<Map<String, dynamic>>;
+
+      _featuredItems =
+          results[2] as List<Map<String, dynamic>>;
+
+      _activeCategory = 'All';
       _loading = false;
     });
-  } catch (e, stack) {
-    print("SHOP ERROR:");
-    print(e);
-    print(stack);
+  } catch (error, stackTrace) {
+    debugPrint('SHOP ERROR: $error');
+    debugPrintStack(stackTrace: stackTrace);
+
+    if (!mounted) return;
 
     setState(() {
       _loading = false;
     });
   }
 }
+
+
+
+Future<void> _searchProducts(String query) async {
+  final search = query.trim();
+
+  setState(() {
+    _productsLoading = true;
+  });
+
+  try {
+    String? categorySlug;
+
+    if (_activeCategory != 'All') {
+      final selectedCategory = _categories.firstWhere(
+        (item) =>
+            item['name']?.toString() ==
+            _activeCategory,
+      );
+
+      categorySlug =
+          selectedCategory['slug']?.toString();
+    }
+
+    final products = await _shopService.getProducts(
+      search: search,
+      category: categorySlug,
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _featuredItems = products;
+      _loading = false;
+    });
+  } catch (error, stackTrace) {
+    debugPrint('SEARCH ERROR: $error');
+    debugPrintStack(stackTrace: stackTrace);
+
+    if (!mounted) return;
+
+    setState(() {
+      _loading = false;
+    });
+  }
+}
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -86,8 +138,7 @@ List<Map<String, dynamic>> _featuredItems = [];
             const SizedBox(height: 12),
 
             ShopSearchBanner(
-              onSearchChanged: (query) {},
-              onFilterTap: () {},
+              onSearch: _searchProducts,
             ),
 
             const SizedBox(height: 16),
@@ -98,34 +149,52 @@ List<Map<String, dynamic>> _featuredItems = [];
                 ..._categories.map((e) => e['name'].toString()),
               ],
               selectedCategory: _activeCategory,
-              onCategorySelected: (category) async {
-                print("Category Selected: $category");
-                setState(() {
-                  _activeCategory = category;
-                });
+             onCategorySelected: (category) async {
+              if (category == _activeCategory) return;
+
+              setState(() {
+                _activeCategory = category;
+                _productsLoading = true;
+              });
+
+              try {
+                late List<Map<String, dynamic>> items;
 
                 if (category == 'All') {
-                  final items =
-                      await _shopService.getFeaturedProducts();
-
-                  setState(() {
-                    _featuredItems = items;
-                  });
+                  items = await _shopService.getProducts();
                 } else {
-                  final slug = _categories.firstWhere(
-                    (e) => e['name'] == category,
-                  )['slug'];
-                  print("Slug: $slug");
+                  final selectedCategory = _categories.firstWhere(
+                    (item) =>
+                        item['name']?.toString() == category,
+                  );
 
-                  final items =
-                      await _shopService.getProducts(category: slug);
-                      print(items);
+                  final slug =
+                      selectedCategory['slug']?.toString() ?? '';
 
-                  setState(() {
-                    _featuredItems = items;
-                  });
+                  items = await _shopService.getProducts(
+                    category: slug,
+                  );
                 }
-              },
+
+                if (!mounted) return;
+
+                setState(() {
+                  _featuredItems = items;
+                  _productsLoading = false;
+                });
+              } catch (error, stackTrace) {
+                debugPrint(
+                  'CATEGORY PRODUCTS ERROR: $error',
+                );
+                debugPrintStack(stackTrace: stackTrace);
+
+                if (!mounted) return;
+
+                setState(() {
+                  _productsLoading = false;
+                });
+              }
+            },
             ),
 
             const SizedBox(height: 24),
@@ -156,7 +225,7 @@ List<Map<String, dynamic>> _featuredItems = [];
 
             Text(
               _activeCategory == 'All'
-                  ? 'Featured Items'
+                  ? 'All Products'
                   : _activeCategory,
               style: const TextStyle(
                 fontSize: 18,
@@ -166,8 +235,23 @@ List<Map<String, dynamic>> _featuredItems = [];
             ),
 
             const SizedBox(height: 12),
-
-            GridView.builder(
+    _productsLoading
+    ? const SizedBox(
+        height: 220,
+        child: Center(
+          child: CircularProgressIndicator(),
+        ),
+      )
+    : _featuredItems.isEmpty
+        ? const SizedBox(
+            height: 180,
+            child: Center(
+              child: Text(
+                'No products found',
+              ),
+            ),
+          )
+        : GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               gridDelegate:
@@ -181,25 +265,50 @@ List<Map<String, dynamic>> _featuredItems = [];
               itemBuilder: (context, index) {
                 final product = _featuredItems[index];
 
-                final image = (product['images'] as List).isNotEmpty
-                    ? product['images'][0]
-                    : '';
+                  final image = (product['images'] as List).isNotEmpty
+                      ? product['images'][0]
+                      : '';
 
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.pushNamed(
-                      context,
-                      AppRoutes.itemDetail,
-                      arguments: product['slug'],
-                    );
-                  },
-                  child: ProductCard(
-                    title: product['name'],
-                    priceString:
-                        '\$${product['discounted_price'] ?? product['price']}',
-                    imagePathUrl: image,
-                  ),
-                );
+                  final originalPrice = double.tryParse(
+                    product['price']?.toString() ?? '0',
+                  ) ??
+                  0;
+
+                  final discountedPrice = double.tryParse(
+                    product['discounted_price']?.toString() ??
+                        '',
+                  );
+
+                  final hasDiscount =
+                      discountedPrice != null &&
+                      discountedPrice < originalPrice;
+
+                  final rawStock = product['in_stock'];
+
+                  final inStock = rawStock == true ||
+                      rawStock == 1 ||
+                      rawStock?.toString() == '1';
+
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(
+                        context,
+                        AppRoutes.itemDetail,
+                        arguments: product['slug'],
+                      );
+                    },
+                    child: ProductCard(
+                      title:
+                          product['name']?.toString() ?? '',
+                      priceString:
+                          '\$${originalPrice.toStringAsFixed(2)} AUD',
+                      discountedPriceString: hasDiscount
+                          ? '\$${discountedPrice.toStringAsFixed(2)} AUD'
+                          : null,
+                      imagePathUrl: image.toString(),
+                      inStock: inStock,
+                    ),
+                  );
               },
             ),
 

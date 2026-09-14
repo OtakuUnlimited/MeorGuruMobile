@@ -33,6 +33,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final lastNameController = TextEditingController();
   final usernameController = TextEditingController();
 
+  final GlobalKey<FormState> _profileFormKey = GlobalKey<FormState>();
+
   // Location
   final suburbC = TextEditingController();
   final postalC = TextEditingController();
@@ -63,70 +65,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> loadData() async {
-    try {
-      final response = await _authService.getProfile();
+  try {
+    final response = await _authService.getProfile();
 
-      print("PROFILE RESPONSE => $response");
+    print("PROFILE RESPONSE => $response");
 
-      user = response;
+    user = response;
 
-      final countryData =
-          await _contentService.fetchCountries();
+    final countryData =
+        await _contentService.fetchCountries();
 
-      countries = countryData;
+    countries = countryData;
 
-      if (user != null) {
-        // Name
-        firstNameController.text =
-            user?['first_name'] ?? '';
+    // Create a local variable so Dart knows it is not null
+    final profile = user;
 
-        middleNameController.text =
-            user?['middle_name'] ?? '';
+    if (profile != null) {
+      // ============================================================
+      // NAME
+      // ============================================================
 
-        lastNameController.text =
-            user?['last_name'] ?? '';
+      firstNameController.text =
+          profile['first_name']?.toString() ?? '';
 
-        usernameController.text =
-            user?['username'] ?? '';
+      middleNameController.text =
+          profile['middle_name']?.toString() ?? '';
 
-        // Contact
-        phoneController.text =
-            user?['phone'] ?? '';
+      lastNameController.text =
+          profile['last_name']?.toString() ?? '';
 
-        countryCodeController.text =
-        (user?['country_code'] ?? '+977')
-          .toString()
-          .replaceAll('++', '+');
+      usernameController.text =
+          profile['username']?.toString() ?? '';
 
-        emailController.text =
-            user?['email'] ?? '';
+      // ============================================================
+      // CONTACT
+      // ============================================================
 
-        // Location
-        suburbC.text =
-            user?['suburb'] ?? '';
+      phoneController.text =
+          profile['phone']?.toString() ?? '';
 
-        postalC.text =
-            user?['postal_code'] ?? '';
+      String countryCode =
+          profile['country_code']?.toString() ?? '';
 
-        addressC.text =
-            user?['address'] ?? '';
+      // Remove + if the database contains +977, +61, etc.
+      countryCode =
+          countryCode.replaceAll('+', '').trim();
 
-        selectedCountry =
-            user?['country'];
-
-        selectedState =
-            user?['state'];
+      // If the stored code has more than 3 digits,
+      // use 1 so the phone field does not crash.
+      if (countryCode.length > 3) {
+        countryCode = '1';
       }
-    } catch (e) {
-      debugPrint(e.toString());
-    }
 
-    if (mounted) {
-      setState(() {
-        isLoading = false;
-      });
+      countryCodeController.text = countryCode;
+
+      emailController.text =
+          profile['email']?.toString() ?? '';
+
+      // ============================================================
+      // LOCATION
+      // ============================================================
+
+      suburbC.text =
+          profile['suburb']?.toString() ?? '';
+
+      postalC.text =
+          profile['postal_code']?.toString() ?? '';
+
+      addressC.text =
+          profile['address']?.toString() ?? '';
+
+      selectedCountry =
+          profile['country'];
+
+      selectedState =
+          profile['state'];
     }
+  } catch (e) {
+    debugPrint("PROFILE LOAD ERROR: $e");
   }
+
+  if (mounted) {
+    setState(() {
+      isLoading = false;
+    });
+  }
+}
 
   Future<void> pickProfileImage() async {
   if (!isEditing) return;
@@ -180,90 +204,171 @@ class _ProfileScreenState extends State<ProfileScreen> {
   );
 }
 
-    Future<void> saveProfile() async {
-    if (user == null) return;
 
+Future<void> _saveProfileWithValidation() async {
+  // Run all Form validators
+  final isValid = _profileFormKey.currentState?.validate() ?? false;
+
+  if (!isValid) {
+    // Show popup error
+    if (!mounted) return;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Row(
+            children: [
+              Icon(
+                Icons.error_outline,
+                color: Colors.red,
+              ),
+              SizedBox(width: 8),
+              Text('Invalid Information'),
+            ],
+          ),
+          content: const Text(
+            'Please check the highlighted fields and correct the information before saving your profile.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'OK',
+                style: TextStyle(
+                  color: AppColors.orangeMain,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    return;
+  }
+
+  // Everything is valid
+  await saveProfile();
+}
+
+
+    Future<void> saveProfile() async {
+  if (user == null) return;
+
+  try {
     setState(() {
       isSaving = true;
     });
 
-    try {
-      final response =
-          await _authService.updateProfile(
-            {
+    // Get country code and remove +
+    String countryCode = countryCodeController.text
+        .replaceAll('+', '')
+        .trim();
+
+    // If country code has more than 3 digits,
+    // save it as 1
+    if (countryCode.length > 3) {
+      countryCode = '1';
+    }
+
+    final response = await _authService.updateProfile(
+      {
         "user_id": user!['id'],
 
         // Name
-        "first_name":
-            firstNameController.text.trim(),
-
-        "middle_name":
-            middleNameController.text.trim(),
-
-        "last_name":
-            lastNameController.text.trim(),
+        "first_name": firstNameController.text.trim(),
+        "middle_name": middleNameController.text.trim(),
+        "last_name": lastNameController.text.trim(),
 
         // Location
         "country": selectedCountry,
         "state": selectedState,
-
-        "suburb":
-            suburbC.text.trim(),
-
-        "postal_code":
-            postalC.text.trim(),
-
-        "address":
-            addressC.text.trim(),
+        "suburb": suburbC.text.trim(),
+        "postal_code": postalC.text.trim(),
+        "address": addressC.text.trim(),
 
         // Contact
-        "phone":
-            phoneController.text.trim(),
+        "phone": phoneController.text.trim(),
 
-        "country_code":
-            countryCodeController.text.trim(),
-      }, _selectedImage,
+        // IMPORTANT:
+        // Use the cleaned countryCode variable
+        "country_code": countryCode,
+      },
+      _selectedImage,
+    );
+
+    if (!mounted) return;
+
+    if (response['success'] == true) {
+      setState(() {
+        isEditing = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Profile updated successfully",
+          ),
+        ),
       );
-
-      if (!mounted) return;
-
-      if (response['success'] == true) {
-        setState(() {
-          isEditing = false;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              "Profile updated successfully",
-            ),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              response['message'].toString(),
-            ),
-          ),
-        );
-      }
-    } catch (e) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            e.toString(),
+            response['message']?.toString() ??
+                "Unable to update profile.",
           ),
         ),
       );
     }
+  } catch (e) {
+    if (!mounted) return;
 
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          "Failed to update profile: $e",
+        ),
+      ),
+    );
+  } finally {
     if (mounted) {
       setState(() {
         isSaving = false;
       });
     }
-  }  @override
+  }
+}
+  
+  String? _getAvatarUrl(dynamic avatar) {
+  if (avatar == null || avatar.toString().isEmpty) {
+    return null;
+  }
+
+  String avatarName = avatar.toString();
+
+  if (avatarName.startsWith('http')) {
+    return avatarName;
+  }
+
+  if (avatarName.contains('127.0.0.1:8000')) {
+    avatarName = avatarName.replaceFirst(
+      '127.0.0.1:8000',
+      '10.0.2.2:8000',
+    );
+  }
+
+  return 'http://10.0.2.2:8000/uploads/users/$avatarName';
+}
+
+   @override
   void dispose() {
     // Name
     firstNameController.dispose();
@@ -301,7 +406,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         showSettings: true,
         showBookings: true,
       ),
-      body: SingleChildScrollView(
+      body: Form(
+      key: _profileFormKey,
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
@@ -309,7 +416,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // Profile image
             ProfileImageSection(
-              imageUrl: user?['profile_image'],
+              imageUrl: _getAvatarUrl(user?['avatar']),
               selectedImage: _selectedImage,
               editable: isEditing,
               onTap: pickProfileImage,
@@ -376,7 +483,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             isEditing = true;
                           });
                         } else {
-                          await saveProfile();
+                          await _saveProfileWithValidation();
                         }
                       },
                 child: isSaving
@@ -496,6 +603,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

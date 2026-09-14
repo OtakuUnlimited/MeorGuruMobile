@@ -1,62 +1,171 @@
 import 'package:flutter/material.dart';
-import '../../../constants.dart';
 
-class ShopSearchBanner extends StatelessWidget {
-  final TextEditingController? searchController;
-  final ValueChanged<String>? onSearchChanged;
-  final VoidCallback? onFilterTap;
-
+class ShopSearchBanner extends StatefulWidget {
   const ShopSearchBanner({
-    Key? key,
-    this.searchController,
-    this.onSearchChanged,
-    this.onFilterTap,
-  }) : super(key: key);
+    super.key,
+    required this.onSearch,
+  });
+
+  final Future<void> Function(String query) onSearch;
+
+  @override
+  State<ShopSearchBanner> createState() =>
+      _ShopSearchBannerState();
+}
+
+class _ShopSearchBannerState
+    extends State<ShopSearchBanner> {
+  final TextEditingController _searchController =
+      TextEditingController();
+
+  bool _searching = false;
+  String _lastSubmittedQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submitSearch() async {
+  if (_searching) return;
+
+  final query =
+      _searchController.text.trim();
+
+  // Prevent repeating the same search.
+  if (query == _lastSubmittedQuery) {
+    return;
+  }
+
+  FocusScope.of(context).unfocus();
+
+  setState(() {
+    _searching = true;
+  });
+
+  try {
+    await widget.onSearch(query);
+
+    _lastSubmittedQuery = query;
+  } finally {
+    if (mounted) {
+      setState(() {
+        _searching = false;
+      });
+    }
+  }
+}
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
         Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.textDark.withOpacity(0.4)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.search, color: AppColors.textDark),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    controller: searchController,
-                    onChanged: onSearchChanged,
-                    decoration: const InputDecoration(
-                      hintText: 'Search',
-                      hintStyle: TextStyle(color: Colors.grey),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.symmetric(vertical: 12),
-                    ),
-                  ),
+          child: TextField(
+            controller: _searchController,
+            textInputAction: TextInputAction.search,
+            onSubmitted: (_) => _submitSearch(),
+            decoration: InputDecoration(
+              hintText: 'Search products',
+              prefixIcon: const Icon(
+                Icons.search,
+              ),
+              suffixIcon:
+                  _searchController.text.isNotEmpty
+                      ? IconButton(
+                          onPressed: () {
+                            _searchController.clear();
+                            setState(() {});
+                            widget.onSearch('');
+                          },
+                          icon: const Icon(
+                            Icons.close,
+                          ),
+                        )
+                      : null,
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding:
+                  const EdgeInsets.symmetric(
+                vertical: 14,
+              ),
+              border: OutlineInputBorder(
+                borderRadius:
+                    BorderRadius.circular(10),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE0E0E0),
                 ),
-              ],
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius:
+                    BorderRadius.circular(10),
+                borderSide: const BorderSide(
+                  color: Color(0xFFE0E0E0),
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius:
+                    BorderRadius.circular(10),
+                borderSide: const BorderSide(
+                  color: Color(0xFFFF5A00),
+                  width: 1.5,
+                ),
+              ),
             ),
+            onChanged: (_) {
+              setState(() {});
+            },
           ),
         ),
         const SizedBox(width: 10),
-        GestureDetector(
-          onTap: onFilterTap,
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppColors.orangeMain,
-              borderRadius: BorderRadius.circular(8),
+        SizedBox(
+          height: 52,
+          child: ElevatedButton(
+            onPressed:
+                _searching ? null : _submitSearch,
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  const Color(0xFFFF5A00),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 18,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius:
+                    BorderRadius.circular(10),
+              ),
             ),
-            child: const Icon(Icons.tune, color: Colors.white),
+            child: _searching
+                ? const SizedBox(
+                    width: 21,
+                    height: 21,
+                    child:
+                        CircularProgressIndicator(
+                      strokeWidth: 2.3,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.search,
+                        size: 20,
+                      ),
+                      SizedBox(width: 6),
+                      Text(
+                        'Search',
+                        style: TextStyle(
+                          fontWeight:
+                              FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
-        )
+        ),
       ],
     );
   }

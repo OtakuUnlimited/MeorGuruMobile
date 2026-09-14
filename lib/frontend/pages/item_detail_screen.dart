@@ -145,7 +145,7 @@ class _ItemDetailScreenState
 
       return false;
     }
-
+  
     setState(() {
       _addingToCart = true;
     });
@@ -234,6 +234,67 @@ class _ItemDetailScreenState
     }
   }
 
+  double _price(
+      Map<String, dynamic> product,
+    ) {
+      return double.tryParse(
+            product['price']?.toString() ?? '0',
+          ) ??
+          0;
+    }
+
+    double? _discountedPrice(
+      Map<String, dynamic> product,
+    ) {
+      return double.tryParse(
+        product['discounted_price']?.toString() ??
+            '',
+      );
+    }
+
+    bool _inStock(
+      Map<String, dynamic> product,
+    ) {
+      final stock = product['in_stock'];
+
+      return stock == true ||
+          stock == 1 ||
+          stock?.toString() == '1';
+    }
+
+    Widget _productCard(
+      Map<String, dynamic> product, {
+      double? width,
+    }) {
+      final originalPrice = _price(product);
+      final discountedPrice =
+          _discountedPrice(product);
+
+      final hasDiscount =
+          discountedPrice != null &&
+          discountedPrice < originalPrice;
+
+      final images = product['images'];
+
+      final image =
+          images is List && images.isNotEmpty
+              ? images.first.toString()
+              : '';
+
+      return ProductCard(
+        width: width,
+        title:
+            product['name']?.toString() ?? '',
+        priceString:
+            '\$${originalPrice.toStringAsFixed(2)} AUD',
+        discountedPriceString: hasDiscount
+            ? '\$${discountedPrice.toStringAsFixed(2)} AUD'
+            : null,
+        imagePathUrl: image,
+        inStock: _inStock(product),
+      );
+    }
+
   // ============================================================
   // BUILD
   // ============================================================
@@ -316,19 +377,98 @@ class _ItemDetailScreenState
                                     height: 6,
                                   ),
 
-                                  Text(
-                                    '\$${_product!['discounted_price'] ?? _product!['price']}',
-                                    style:
-                                        const TextStyle(
-                                      fontSize:
-                                          24,
-                                      color:
-                                          AppColors
-                                              .orangeMain,
-                                      fontWeight:
-                                          FontWeight
-                                              .bold,
-                                    ),
+                                  Builder(
+                                    builder: (context) {
+                                      final originalPrice =
+                                          _price(_product!);
+
+                                      final discountedPrice =
+                                          _discountedPrice(_product!);
+
+                                      final hasDiscount =
+                                          discountedPrice != null &&
+                                          discountedPrice < originalPrice;
+
+                                      final inStock =
+                                          _inStock(_product!);
+
+                                      return Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Expanded(
+                                            child: hasDiscount
+                                                ? Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        '\$${originalPrice.toStringAsFixed(2)} AUD',
+                                                        style:
+                                                            const TextStyle(
+                                                          fontSize: 16,
+                                                          color: Colors.grey,
+                                                          decoration:
+                                                              TextDecoration
+                                                                  .lineThrough,
+                                                        ),
+                                                      ),
+                                                      const SizedBox(height: 3),
+                                                      Text(
+                                                        '\$${discountedPrice.toStringAsFixed(2)} AUD',
+                                                        style:
+                                                            const TextStyle(
+                                                          fontSize: 24,
+                                                          color: AppColors
+                                                              .orangeMain,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  )
+                                                : Text(
+                                                    '\$${originalPrice.toStringAsFixed(2)} AUD',
+                                                    style:
+                                                        const TextStyle(
+                                                      fontSize: 24,
+                                                      color:
+                                                          AppColors.orangeMain,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                  ),
+                                          ),
+                                          Container(
+                                            padding:
+                                                const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 5,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: inStock
+                                                  ? Colors.green.shade50
+                                                  : Colors.red.shade50,
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                            ),
+                                            child: Text(
+                                              inStock
+                                                  ? 'In Stock'
+                                                  : 'Out of Stock',
+                                              style: TextStyle(
+                                                color: inStock
+                                                    ? Colors.green
+                                                    : Colors.red,
+                                                fontSize: 13,
+                                                fontWeight:
+                                                    FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   ),
 
                                   const SizedBox(
@@ -487,17 +627,10 @@ class _ItemDetailScreenState
                                             );
                                           },
                                           child:
-                                              ProductCard(
-                                            width:
-                                                140,
-                                            title:
-                                                product[
-                                                    'name'],
-                                            priceString:
-                                                '\$${product['discounted_price'] ?? product['price']}',
-                                            imagePathUrl:
-                                                image,
-                                          ),
+                                             _productCard(
+                                                product,
+                                                width: 150,
+                                              ),
                                         );
                                       },
                                     ),
@@ -585,15 +718,7 @@ class _ItemDetailScreenState
                                           );
                                         },
                                         child:
-                                            ProductCard(
-                                          title:
-                                              product[
-                                                  'name'],
-                                          priceString:
-                                              '\$${product['discounted_price'] ?? product['price']}',
-                                          imagePathUrl:
-                                              image,
-                                        ),
+                                            _productCard(product),
                                       );
                                     },
                                   ),
@@ -746,7 +871,7 @@ class _ItemDetailScreenState
                                   elevation: 0,
                                 ),
                                 onPressed:
-                                    _addingToCart
+                                     _addingToCart || !_inStock(_product!)
                                         ? null
                                         : () async {
                                             final success =

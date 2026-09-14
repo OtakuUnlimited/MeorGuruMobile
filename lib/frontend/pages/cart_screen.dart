@@ -87,12 +87,15 @@ class _CartScreenState extends State<CartScreen> {
       }
 
       final price = double.tryParse(
-            (item['discounted_price'] ??
-                    item['price'] ??
-                    0)
-                .toString(),
-          ) ??
-          0;
+        (
+          item['discounted_unit_price'] ??
+          item['discounted_price'] ??
+          item['unit_price'] ??
+          item['price'] ??
+          0
+        ).toString(),
+      ) ??
+      0;
 
       final quantity =
           int.tryParse(
@@ -223,8 +226,8 @@ class _CartScreenState extends State<CartScreen> {
     try {
       for (final item in selectedItems) {
         final id = int.tryParse(
-          item['id'].toString(),
-        );
+        (item['item_id'] ?? item['id']).toString(),
+      );
 
         if (id != null) {
           await cartNotifier.removeItem(id);
@@ -370,27 +373,18 @@ class _CartScreenState extends State<CartScreen> {
                                 final item =
                                     items[index];
 
+                                final images = item['images'];
+
                                 final image =
-                                    item['images']
-                                            is List &&
-                                        (item['images']
-                                                as List)
-                                            .isNotEmpty
-                                    ? (item['images']
-                                            as List)[0]
-                                        .toString()
-                                    : '';
+                                    images is List && images.isNotEmpty
+                                        ? images.first.toString()
+                                        : item['image']?.toString() ?? '';
 
                                 final name =
                                     item['name']
                                             ?.toString() ??
                                         '';
 
-                                final price =
-                                    item[
-                                            'discounted_price'] ??
-                                        item['price'] ??
-                                        0;
 
                                 final quantity =
                                     int.tryParse(
@@ -399,21 +393,50 @@ class _CartScreenState extends State<CartScreen> {
                                         ) ??
                                         1;
 
-                                final itemId =
-                                    int.tryParse(
-                                      item['id']
-                                          .toString(),
-                                    );
+                               final itemId = int.tryParse(
+                                  (
+                                    item['item_id'] ??
+                                    item['id'] ??
+                                    ''
+                                  ).toString(),
+                                );
 
+
+                                final originalPrice = double.tryParse(
+                                    (
+                                      item['unit_price'] ??
+                                      item['price'] ??
+                                      0
+                                    ).toString(),
+                                  ) ??
+                                  0;
+
+                              final discountedPrice = double.tryParse(
+                                    (
+                                      item['discounted_unit_price'] ??
+                                      item['discounted_price'] ??
+                                      originalPrice
+                                    ).toString(),
+                                  ) ??
+                                  originalPrice;
+
+                              final hasDiscount =
+                                  discountedPrice < originalPrice;
+
+                              final displayedPrice = hasDiscount
+                                  ? '\$${originalPrice.toStringAsFixed(2)} → '
+                                      '\$${discountedPrice.toStringAsFixed(2)} AUD'
+                                  : '\$${originalPrice.toStringAsFixed(2)} AUD';
+
+                                
                                 return CartItemTile(
                                   name: name,
-                                  priceString:
-                                      '\$$price',
+                                  originalPriceString:'\$${originalPrice.toStringAsFixed(2)} AUD',
+                                  discountedPriceString: hasDiscount? '\$${discountedPrice.toStringAsFixed(2)} AUD': null,
                                   imageUrl: image,
                                   quantity: quantity,
                                   isSelected:
-                                      item['selected'] ==
-                                          true,
+                                      item['selected'] == true,
 
                                   // -----------------------------
                                   // CHECKBOX

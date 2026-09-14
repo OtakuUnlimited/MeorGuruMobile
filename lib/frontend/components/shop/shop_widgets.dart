@@ -6,21 +6,32 @@ class ProductCard extends StatelessWidget {
   final double? width;
   final String title;
   final String priceString;
+  final String? discountedPriceString;
   final String imagePathUrl;
+  final bool? inStock;
 
   const ProductCard({
-    Key? key,
+    super.key,
     this.width,
     required this.title,
     required this.priceString,
+    this.discountedPriceString,
     required this.imagePathUrl,
-  }) : super(key: key);
+    this.inStock,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final hasDiscount =
+        discountedPriceString != null &&
+        discountedPriceString!.isNotEmpty &&
+        discountedPriceString != priceString;
+
     return Container(
       width: width,
-      margin: width != null ? const EdgeInsets.only(right: 12) : EdgeInsets.zero,
+      margin: width != null
+          ? const EdgeInsets.only(right: 12)
+          : EdgeInsets.zero,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -29,46 +40,129 @@ class ProductCard extends StatelessWidget {
             color: Colors.black.withOpacity(0.04),
             blurRadius: 6,
             spreadRadius: 2,
-          )
+          ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           Expanded(
             child: ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: Image.network(
-                imagePathUrl,
-                fit: BoxFit.cover,
-                width: double.infinity,
-                errorBuilder: (_, __, ___) => Container(color: Colors.grey.shade100),
+              borderRadius:
+                  const BorderRadius.vertical(
+                top: Radius.circular(16),
               ),
+              child: imagePathUrl.isEmpty
+                  ? Container(
+                      width: double.infinity,
+                      color: Colors.grey.shade100,
+                      child: const Icon(
+                        Icons.image_not_supported_outlined,
+                        color: Colors.grey,
+                      ),
+                    )
+                  : Image.network(
+                      imagePathUrl,
+                      fit: BoxFit.cover,
+                      width: double.infinity,
+                      errorBuilder: (_, __, ___) =>
+                          Container(
+                        color: Colors.grey.shade100,
+                        child: const Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(12),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment:
+                  CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 14, color: AppColors.textDark),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  priceString,
                   style: const TextStyle(
                     fontSize: 14,
-                    color: AppColors.orangeMain,
-                    fontWeight: FontWeight.bold,
+                    color: AppColors.textDark,
                   ),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: hasDiscount
+                          ? Column(
+                              crossAxisAlignment:
+                                  CrossAxisAlignment
+                                      .start,
+                              children: [
+                                Text(
+                                  priceString,
+                                  style:
+                                      const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                    decoration:
+                                        TextDecoration
+                                            .lineThrough,
+                                  ),
+                                ),
+                                const SizedBox(
+                                  height: 2,
+                                ),
+                                Text(
+                                  discountedPriceString!,
+                                  style:
+                                      const TextStyle(
+                                    fontSize: 14,
+                                    color: AppColors
+                                        .orangeMain,
+                                    fontWeight:
+                                        FontWeight.bold,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : Text(
+                              priceString,
+                              style:
+                                  const TextStyle(
+                                fontSize: 14,
+                                color: AppColors
+                                    .orangeMain,
+                                fontWeight:
+                                    FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                    if (inStock != null)
+                      Text(
+                        inStock!
+                            ? 'In Stock'
+                            : 'Out of Stock',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight:
+                              FontWeight.bold,
+                          color: inStock!
+                              ? Colors.green
+                              : Colors.red,
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
+
 import 'shop_widgets.dart';
 
-class PopularItemsCarousel extends StatelessWidget {
+class PopularItemsCarousel
+    extends StatelessWidget {
   final List<Map<String, dynamic>> items;
-  final Function(Map<String, dynamic>)? onItemTap;
+
+  final Function(Map<String, dynamic>)?
+      onItemTap;
 
   const PopularItemsCarousel({
     super.key,
@@ -13,30 +17,77 @@ class PopularItemsCarousel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (items.isEmpty) {
+      return const SizedBox(
+        height: 160,
+        child: Center(
+          child: Text(
+            'No popular products found',
+          ),
+        ),
+      );
+    }
+
     return SizedBox(
-      height: 240,
+      height: 250,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: items.length,
         itemBuilder: (context, index) {
           final item = items[index];
 
-          String image = '';
+          final rawImages = item['images'];
 
-          if (item['images'] != null &&
-              item['images'] is List &&
-              (item['images'] as List).isNotEmpty) {
-            image = item['images'][0].toString();
-          }
+          final image =
+              rawImages is List &&
+                      rawImages.isNotEmpty
+                  ? rawImages.first.toString()
+                  : '';
+
+          final originalPrice =
+              double.tryParse(
+                    item['price']
+                            ?.toString() ??
+                        '0',
+                  ) ??
+                  0;
+
+          final discountedPrice =
+              double.tryParse(
+            item['discounted_price']
+                    ?.toString() ??
+                '',
+          );
+
+          final hasDiscount =
+              discountedPrice != null &&
+              discountedPrice <
+                  originalPrice;
+
+          final rawStock =
+              item['in_stock'];
+
+          final inStock =
+              rawStock == true ||
+              rawStock == 1 ||
+              rawStock?.toString() == '1';
 
           return GestureDetector(
-            onTap: () => onItemTap?.call(item),
+            onTap: () =>
+                onItemTap?.call(item),
             child: ProductCard(
               width: 164,
-              title: item['name'] ?? '',
+              title:
+                  item['name']?.toString() ??
+                      '',
               priceString:
-                  '\$${item['discounted_price'] ?? item['price']}',
+                  '\$${originalPrice.toStringAsFixed(2)} AUD',
+              discountedPriceString:
+                  hasDiscount
+                      ? '\$${discountedPrice.toStringAsFixed(2)} AUD'
+                      : null,
               imagePathUrl: image,
+              inStock: inStock,
             ),
           );
         },

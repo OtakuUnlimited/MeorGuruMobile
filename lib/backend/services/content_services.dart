@@ -1,6 +1,7 @@
 import 'api_client.dart';
 import 'cache_service.dart';
 import 'cache_keys.dart';
+import 'package:flutter/foundation.dart';
 
 class ContentService {
   final ApiClient _client = ApiClient();
@@ -334,32 +335,123 @@ Future<List<dynamic>> fetchAuspiciousMonths() async {
 }
 
 Future<List<dynamic>> fetchRitualAuspiciousDates({
-  required int ritualId,
+  required Object ritualId,
   required int countryId,
   required String year,
   required String month,
 }) async {
-  final response = await _client.post(
-    'get_ritual_auspicious_dates',
-    {
-      'ritual_id': ritualId,
-      'country_id': countryId,
-      'year': year,
-      'month': month,
-    },
+  final requestData = {
+    'ritual_id': ritualId,
+    'country_id': countryId,
+    'year': year,
+    'month': month,
+  };
+
+  debugPrint(
+    '========== AUSPICIOUS DATE REQUEST ==========',
+  );
+  debugPrint(
+    'API: get_ritual_auspicious_dates',
+  );
+  debugPrint(
+    'Data sent: $requestData',
   );
 
-  if (response['status'] == 200) {
-    // Supports either {status, data:[...]} or
-    // {status, dates:[...]} from the Laravel controller.
-    return List<dynamic>.from(
-      response['data'] ?? response['dates'] ?? [],
+  try {
+    final response = await _client.post(
+      'get_ritual_auspicious_dates',
+      requestData,
     );
-  }
 
-  throw Exception(
-    response['message'] ?? 'Failed to load auspicious dates',
-  );
+    debugPrint(
+      '========== AUSPICIOUS DATE RESPONSE ==========',
+    );
+    debugPrint(
+      'Response type: ${response.runtimeType}',
+    );
+    debugPrint(
+      'Full response: $response',
+    );
+    debugPrint(
+      'Status: ${response['status']}',
+    );
+    debugPrint(
+      'Data field: ${response['data']}',
+    );
+    debugPrint(
+      'Dates field: ${response['dates']}',
+    );
+
+    if (response['status'] == 200) {
+      final rawDates =
+          response['data'] ??
+          response['dates'] ??
+          [];
+
+      debugPrint(
+        'Selected dates data: $rawDates',
+      );
+      debugPrint(
+        'Selected dates type: '
+        '${rawDates.runtimeType}',
+      );
+
+      if (rawDates is! List) {
+        debugPrint(
+          'ERROR: Dates response is not a List',
+        );
+
+        throw FormatException(
+          'Expected dates to be a List, '
+          'but received ${rawDates.runtimeType}',
+        );
+      }
+
+      final dates =
+          List<dynamic>.from(rawDates);
+
+      debugPrint(
+        'Number of auspicious dates: '
+        '${dates.length}',
+      );
+
+      for (
+        int index = 0;
+        index < dates.length;
+        index++
+      ) {
+        debugPrint(
+          'Date [$index]: ${dates[index]}',
+        );
+      }
+
+      return dates;
+    }
+
+    debugPrint(
+      'API returned an unsuccessful status.',
+    );
+    debugPrint(
+      'Message: ${response['message']}',
+    );
+
+    throw Exception(
+      response['message'] ??
+          'Failed to load auspicious dates',
+    );
+  } catch (error, stackTrace) {
+    debugPrint(
+      '========== AUSPICIOUS DATE ERROR ==========',
+    );
+    debugPrint(
+      'Error: $error',
+    );
+    debugPrintStack(
+      stackTrace: stackTrace,
+    );
+
+    rethrow;
+  }
 }
 
 Future<dynamic> saveBasicDetails({
