@@ -22,9 +22,9 @@ class CheckoutSummaryCard extends StatelessWidget {
     return Column(
       children: [
         _buildSummaryRow('Subtotal', subtotal),
-        _buildSummaryRow('Discount (10%)', discount),
+        _buildSummaryRow('Discount',discount,),
         _buildSummaryRow('Delivery Fee', deliveryFee),
-        _buildSummaryRow('Tax (13%)', tax),
+        _buildSummaryRow('Tax', tax),
         const Divider(height: 24, thickness: 1),
         _buildSummaryRow('Total', total, isGrandTotal: true),
       ],

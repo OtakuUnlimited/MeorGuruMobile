@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../backend/services/content_services.dart';
 import '../components/top_nav_bar.dart';
-import '../components/bottom_nav_bar.dart';
 import '../../routes/app_routes.dart';
 
 class AstrologyDetailScreen extends StatefulWidget {

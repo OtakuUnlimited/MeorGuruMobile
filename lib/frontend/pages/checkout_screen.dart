@@ -49,6 +49,7 @@ class _CheckOutScreenState
   bool _applyingCoupon = false;
 
   String? _error;
+  bool _updatingItem = false;
 
   List<Map<String, dynamic>> _checkoutItems = [];
 
@@ -165,6 +166,53 @@ class _CheckOutScreenState
     }
   }
 
+  Future<void> _updateQuantity({
+  required int itemId,
+  required int quantity,
+}) async {
+  if (itemId == 0 || quantity < 1 || _updatingItem) {
+    return;
+  }
+
+  setState(() {
+    _updatingItem = true;
+  });
+
+  try {
+    await _shopService.updateCartItem(
+      itemId: itemId,
+      quantity: quantity,
+    );
+
+    await _loadCheckout(
+      couponCode:
+          _voucherController.text.trim().isEmpty
+              ? null
+              : _voucherController.text.trim(),
+    );
+  } catch (e) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        backgroundColor: Colors.red.shade700,
+        content: Text(
+          e.toString(),
+          style: const TextStyle(
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _updatingItem = false;
+      });
+    }
+  }
+}
+
   Future<void> _applyVoucher() async {
     final code =
         _voucherController.text.trim();
@@ -258,17 +306,39 @@ class _CheckOutScreenState
           return null;
         },
         decoration: InputDecoration(
-          labelText: label,
-          hintText: placeholder,
-          filled: true,
-          fillColor:
-              const Color(0xFFF8F9FA),
-          border: OutlineInputBorder(
-            borderRadius:
-                BorderRadius.circular(8),
-            borderSide: BorderSide.none,
+        labelText: label,
+        hintText: placeholder,
+        filled: false,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 2,
+          vertical: 12,
+        ),
+        enabledBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: Color(0xFFBDBDBD),
+            width: 1,
           ),
         ),
+        focusedBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: AppColors.orangeMain,
+            width: 2,
+          ),
+        ),
+        errorBorder: const UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: Colors.red,
+            width: 1,
+          ),
+        ),
+        focusedErrorBorder: 
+            const UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: Colors.red,
+            width: 2,
+          ),
+        ),
+      ),
       ),
     );
   }
@@ -349,6 +419,7 @@ class _CheckOutScreenState
                           Container(
                             constraints:
                                 const BoxConstraints(
+                                  minHeight: 200,
                               maxHeight: 230,
                             ),
                             decoration:
@@ -388,36 +459,73 @@ class _CheckOutScreenState
                                             ?.toString() ??
                                         '';
 
-                                return CheckoutOrderTile(
-                                  title:
-                                      item['name']
-                                              ?.toString() ??
-                                          '',
-                                  priceString: _money(
+                               final rawImages =
+                                  item['images'] ?? item['image'];
+
+                              String imageUrl = '';
+
+                              if (rawImages is List &&
+                                  rawImages.isNotEmpty) {
+                                imageUrl =
+                                    rawImages.first?.toString() ?? '';
+                              } else if (rawImages is String &&
+                                  rawImages.startsWith('http')) {
+                                imageUrl = rawImages;
+                              }
+
+                              final englishName =
+                                  item['english_name']
+                                      ?.toString()
+                                      .trim() ??
+                                  '';
+
+                              final localName =
+                                  item['name']?.toString().trim() ?? '';
+
+                              final originalPrice = _toDouble(
+                                item['unit_price'] ?? item['price'],
+                              );
+
+                              final discountedPrice = _toDouble(
+                                item['discounted_unit_price'] ??
                                     item['discounted_price'] ??
-                                        item[
-                                            'discounted_unit_price'] ??
-                                        item['price'] ??
-                                        item['unit_price'],
-                                  ),
-                                  imageUrl: image,
-                                  quantity:
-                                      int.tryParse(
-                                            item['quantity']
-                                                    ?.toString() ??
-                                                '1',
-                                          ) ??
-                                          1,
-                                  onRemoveItem:
-                                      () {
-                                    if (itemId !=
-                                        0) {
-                                      _removeItem(
-                                        itemId,
-                                      );
-                                    }
-                                  },
-                                );
+                                    originalPrice,
+                              );
+
+                              final hasDiscount =
+                                  discountedPrice < originalPrice;
+
+                              final quantity = int.tryParse(
+                                item['quantity']?.toString() ?? '1',
+                              ) ??
+                              1;
+
+                          return CheckoutOrderTile(
+                            englishName: englishName,
+                            localName: localName,
+                            originalPriceString: _money(originalPrice),
+                            discountedPriceString: hasDiscount
+                                ? _money(discountedPrice)
+                                : null,
+                            imageUrl: imageUrl,
+                            quantity: quantity,
+                            onDecrement:
+                                _updatingItem || quantity <= 1
+                                    ? null
+                                    : () => _updateQuantity(
+                                          itemId: itemId,
+                                          quantity: quantity - 1,
+                                        ),
+                            onIncrement: _updatingItem
+                                ? null
+                                : () => _updateQuantity(
+                                      itemId: itemId,
+                                      quantity: quantity + 1,
+                                    ),
+                            onRemoveItem: _updatingItem || itemId == 0
+                                ? null
+                                : () => _removeItem(itemId),
+                          );
                               },
                             ),
                           ),
@@ -508,42 +616,81 @@ class _CheckOutScreenState
                               child: TextField(
                                 controller:
                                     _voucherController,
-                                decoration:
-                                    InputDecoration(
-                                  hintText:
-                                      'Discount Voucher',
-                                  filled: true,
-                                  fillColor: Colors
-                                      .grey.shade100,
-                                  border:
-                                      OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius
-                                            .circular(8),
-                                    borderSide:
-                                        BorderSide.none,
+                                decoration: InputDecoration(
+                                  hintText: 'Discount Voucher',
+                                  filled: false,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    horizontal: 14,
+                                    vertical: 16,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFBDBDBD),
+                                    ),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFFBDBDBD),
+                                    ),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                    borderSide: const BorderSide(
+                                      color: AppColors.orangeMain,
+                                      width: 2,
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                             const SizedBox(width: 10),
-                            ElevatedButton(
-                              onPressed:
-                                  _applyingCoupon
-                                      ? null
-                                      : _applyVoucher,
-                              child: _applyingCoupon
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child:
-                                          CircularProgressIndicator(
-                                        strokeWidth: 2,
+                            SizedBox(
+                              height: 54,
+                              child: ElevatedButton(
+                                onPressed: _applyingCoupon
+                                    ? null
+                                    : _applyVoucher,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      const Color(0xFFC62828),
+                                  foregroundColor: Colors.white,
+                                  disabledBackgroundColor:
+                                      const Color(0xFFC62828)
+                                          .withOpacity(0.6),
+                                  disabledForegroundColor:
+                                      Colors.white,
+                                  elevation: 0,
+                                  padding:
+                                      const EdgeInsets.symmetric(
+                                    horizontal: 24,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                        BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: _applyingCoupon
+                                    ? const SizedBox(
+                                        width: 21,
+                                        height: 21,
+                                        child:
+                                            CircularProgressIndicator(
+                                          strokeWidth: 2.3,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Apply',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight:
+                                              FontWeight.w600,
+                                        ),
                                       ),
-                                    )
-                                  : const Text(
-                                      'Apply',
-                                    ),
+                              ),
                             ),
                           ],
                         ),
