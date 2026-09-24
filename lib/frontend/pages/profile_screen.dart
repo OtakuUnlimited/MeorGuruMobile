@@ -587,7 +587,7 @@ Future<void> _saveProfileWithValidation() async {
 
                     Navigator.pushNamedAndRemoveUntil(
                       context,
-                      AppRoutes.login,
+                      AppRoutes.home,
                       (route) => false,
                     );
                   }

@@ -8,10 +8,13 @@ import '../searchable_country_dropdown.dart';
 import '../searchable_state_dropdown.dart';
 import '../gotra_dropdown.dart';
 import '../../../backend/services/api_client.dart';
-
+import '../../../backend/services/auth_service.dart';
+import '../../../backend/utils/auth_guard.dart';
+import '../utils/login_required_warning.dart';
 class OnlinePujaForm extends StatefulWidget {
   final Map<String, dynamic> puja;
   final VoidCallback onPaymentSubmit;
+  
 
   const OnlinePujaForm({
     Key? key,
@@ -25,6 +28,9 @@ class OnlinePujaForm extends StatefulWidget {
 
 class _OnlinePujaFormState extends State<OnlinePujaForm> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>(); 
+
+  bool? _isLoggedIn;
+  bool _openingLogin = false;
 
   bool _agreedToTerms = false;
   bool _isSubmitting = false;
@@ -78,6 +84,7 @@ class _OnlinePujaFormState extends State<OnlinePujaForm> {
     return int.tryParse(widget.puja['id']?.toString() ?? '');
   }
 
+  
   // ================= DATE PICKER =================
 
   Future<void> _selectDate() async {
@@ -289,6 +296,21 @@ class _OnlinePujaFormState extends State<OnlinePujaForm> {
   Future<void> submitBooking() async {
     if (_isSubmitting) return;
 
+    final allowed = await requireLogin(
+    context,
+    message:
+        'You need to be logged in to book this Puja.',
+  );
+
+  if (!mounted) return;
+
+  await _checkLogin();
+
+  if (!allowed) {
+    return;
+  }
+
+
     if (!_validateBooking()) return;
 
     setState(() {
@@ -389,6 +411,37 @@ class _OnlinePujaFormState extends State<OnlinePujaForm> {
       }
     }
   }
+
+  Future<void> _openLogin() async {
+  if (_openingLogin) return;
+
+  setState(() {
+    _openingLogin = true;
+  });
+
+  try {
+    await requireLogin(
+      context,
+      message:
+          'Please log in to book this Puja.',
+    );
+
+    final loggedIn =
+        await AuthService.isLoggedIn();
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoggedIn = loggedIn;
+    });
+  } finally {
+    if (mounted) {
+      setState(() {
+        _openingLogin = false;
+      });
+    }
+  }
+}
 
   // ================= STRIPE PAYMENT =================
 
@@ -557,6 +610,22 @@ class _OnlinePujaFormState extends State<OnlinePujaForm> {
 
     super.dispose();
   }
+  @override
+void initState() {
+  super.initState();
+  _checkLogin();
+}
+
+Future<void> _checkLogin() async {
+  final loggedIn =
+      await AuthService.isLoggedIn();
+
+  if (!mounted) return;
+
+  setState(() {
+    _isLoggedIn = loggedIn;
+  });
+}
     @override
   Widget build(BuildContext context) {
     return Container(
@@ -570,7 +639,22 @@ class _OnlinePujaFormState extends State<OnlinePujaForm> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ================= CEREMONY DETAILS =================
+              if (_isLoggedIn == null)
+                const Padding(
+                  padding: EdgeInsets.only(
+                    bottom: 16,
+                  ),
+                  child: LinearProgressIndicator(),
+                ),
+
+              if (_isLoggedIn == false)
+                LoginRequiredWarning(
+                  message:
+                      'You need to be logged in to book this Puja and make a payment.',
+                  loginLoading: _openingLogin,
+                  onLoginPressed: _openLogin,
+                ),
+              // ================= CEREMONY DETAILS =================
 
             _buildSectionHeader('Ceremony Details'),
 

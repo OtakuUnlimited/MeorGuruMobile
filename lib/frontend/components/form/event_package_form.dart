@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../backend/services/bookings.dart';
+import '../../../backend/services/auth_service.dart';
+import '../../../backend/utils/auth_guard.dart';
+import '../utils/login_required_warning.dart';
 
 class EventPackageForm extends StatefulWidget {
   final Map<String, dynamic> eventPackageData;
@@ -44,6 +47,9 @@ class _EventPackageFormState extends State<EventPackageForm> {
   // Form state
   // --------------------------------------------------
 
+  bool? _isLoggedIn;
+  bool _openingLogin = false;
+
   String? _selectedCountry = 'Australia';
 
   String? _selectedGuests = '50';
@@ -86,6 +92,18 @@ class _EventPackageFormState extends State<EventPackageForm> {
   @override
   void initState() {
     super.initState();
+  _checkLogin();
+}
+
+Future<void> _checkLogin() async {
+  final loggedIn =
+      await AuthService.isLoggedIn();
+
+  if (!mounted) return;
+
+  setState(() {
+    _isLoggedIn = loggedIn;
+  });
 
     _eventNameController.text =
         widget.eventPackageData['title']?.toString() ??
@@ -184,6 +202,37 @@ class _EventPackageFormState extends State<EventPackageForm> {
       });
     }
   }
+
+  Future<void> _openLogin() async {
+  if (_openingLogin) return;
+
+  setState(() {
+    _openingLogin = true;
+  });
+
+  try {
+    await requireLogin(
+      context,
+      message:
+          'Please log in to book this Puja.',
+    );
+
+    final loggedIn =
+        await AuthService.isLoggedIn();
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoggedIn = loggedIn;
+    });
+  } finally {
+    if (mounted) {
+      setState(() {
+        _openingLogin = false;
+      });
+    }
+  }
+}
 
   // --------------------------------------------------
   // Start Time
@@ -608,6 +657,7 @@ class _EventPackageFormState extends State<EventPackageForm> {
   // UI
   // --------------------------------------------------
 
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -624,6 +674,23 @@ class _EventPackageFormState extends State<EventPackageForm> {
         crossAxisAlignment:
             CrossAxisAlignment.start,
         children: [
+
+          if (_isLoggedIn == null)
+      const Padding(
+        padding: EdgeInsets.only(
+          bottom: 16,
+        ),
+        child: LinearProgressIndicator(),
+      ),
+
+    if (_isLoggedIn == false)
+      LoginRequiredWarning(
+        message:
+            'You need to be logged in to book this Puja and make a payment.',
+        loginLoading: _openingLogin,
+        onLoginPressed: _openLogin,
+      ),
+
           // ================= EVENT DETAILS =================
 
           _buildSectionHeader(

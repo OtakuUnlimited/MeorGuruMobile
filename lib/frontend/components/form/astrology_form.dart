@@ -8,6 +8,9 @@ import '../searchable_state_dropdown.dart';
 import '../gotra_dropdown.dart';
 import '../models/personal_details.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../../backend/services/auth_service.dart';
+import '../../../backend/utils/auth_guard.dart';
+import '../utils/login_required_warning.dart';
 
 class AstrologyForm extends StatefulWidget {
   final VoidCallback onPaymentSubmit;
@@ -30,6 +33,9 @@ class _AstrologyFormState extends State<AstrologyForm> {
 
 
  final ApiClient _client = ApiClient();
+
+ bool? _isLoggedIn;
+bool _openingLogin = false;
 
 bool _isSubmitting = false;
 bool _agreedToTerms = false;
@@ -98,7 +104,36 @@ final TextEditingController customerEmailController =
 final TextEditingController customerPhoneController =
     TextEditingController();
 
+  Future<void> _openLogin() async {
+  if (_openingLogin) return;
 
+  setState(() {
+    _openingLogin = true;
+  });
+
+  try {
+    await requireLogin(
+      context,
+      message:
+          'Please log in to book this Puja.',
+    );
+
+    final loggedIn =
+        await AuthService.isLoggedIn();
+
+    if (!mounted) return;
+
+    setState(() {
+      _isLoggedIn = loggedIn;
+    });
+  } finally {
+    if (mounted) {
+      setState(() {
+        _openingLogin = false;
+      });
+    }
+  }
+}
 
   Future<void> submitBooking() async {
 
@@ -216,7 +251,22 @@ void dispose() {
 
   super.dispose();
 }
+@override
+void initState() {
+  super.initState();
+  _checkLogin();
+}
 
+Future<void> _checkLogin() async {
+  final loggedIn =
+      await AuthService.isLoggedIn();
+
+  if (!mounted) return;
+
+  setState(() {
+    _isLoggedIn = loggedIn;
+  });
+}
     
 
   @override
@@ -232,6 +282,22 @@ void dispose() {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (_isLoggedIn == null)
+      const Padding(
+        padding: EdgeInsets.only(
+          bottom: 16,
+        ),
+        child: LinearProgressIndicator(),
+      ),
+
+    if (_isLoggedIn == false)
+      LoginRequiredWarning(
+        message:
+            'You need to be logged in to book this Puja and make a payment.',
+        loginLoading: _openingLogin,
+        onLoginPressed: _openLogin,
+      ),
+
           // ================= ORDER DETAILS =================
           _buildSectionHeader('Order Details:'),
           _buildFieldLabel('Order or Service For:'),

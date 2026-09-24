@@ -9,6 +9,7 @@ import '../components/shop/shop_widgets.dart';
 import '../components/shop/item_image_gallery.dart';
 import '../../backend/services/shop_service.dart';
 import '../../routes/app_routes.dart';
+import '../../backend/utils/auth_guard.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final String slug;
@@ -43,6 +44,21 @@ class _ItemDetailScreenState
     super.initState();
     _loadProduct();
   }
+
+  Future<void> _openCart() async {
+  final allowed = await requireLogin(
+    context,
+    message:
+        'You need to be logged in to view your cart.',
+  );
+
+  if (!allowed || !mounted) return;
+
+  Navigator.pushNamed(
+    context,
+    AppRoutes.cart,
+  );
+}
 
   // ============================================================
   // LOAD PRODUCT
@@ -118,121 +134,112 @@ class _ItemDetailScreenState
   // ============================================================
 
   Future<bool> _addToCart() async {
-    if (_product == null) {
-      return false;
-    }
+  if (_product == null ||
+      _addingToCart) {
+    return false;
+  }
 
-    final rawId = _product!['id'];
+  final allowed = await requireLogin(
+    context,
+    message:
+        'You need to be logged in to add items to your cart.',
+  );
 
-    final itemId = int.tryParse(
-      rawId.toString(),
-    );
+  if (!allowed || !mounted) {
+    return false;
+  }
 
-    if (itemId == null) {
-      debugPrint(
-        'ADD TO CART ERROR: Invalid item ID',
-      );
+  final itemId = int.tryParse(
+    _product!['id']?.toString() ?? '',
+  );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
-          const SnackBar(
-            content:
-                Text('Invalid product ID'),
-          ),
-        );
-      }
-
-      return false;
-    }
-  
-    setState(() {
-      _addingToCart = true;
-    });
-
-    try {
-      // --------------------------------------------------------
-      // CHECK LOGIN STATUS
-      // --------------------------------------------------------
-
-      final isLoggedIn =
-          await AuthService.isLoggedIn();
-
-      // --------------------------------------------------------
-      // PRODUCT DATA FOR GUEST CACHE
-      // --------------------------------------------------------
-
-      final productData =
-          Map<String, dynamic>.from(
-        _product!,
-      );
-
-      // --------------------------------------------------------
-      // ADD THROUGH CART NOTIFIER
-      //
-      // Guest:
-      //   Saves item to SharedPreferences cache.
-      //
-      // Logged in:
-      //   Sends item to backend cart.
-      // --------------------------------------------------------
-
-      final success =
-          await cartNotifier.addToCart(
-        itemId: itemId,
-        product: productData,
-        quantity: _itemQuantity,
-      );
-
-      if (!mounted) {
-        return success;
-      }
-
-      if (success) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
-          const SnackBar(
-            content:
-                Text('Added to cart'),
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
-          SnackBar(
-            content: Text(
-              cartNotifier.error ??
-                  'Could not add item to cart',
+  if (itemId == null) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          backgroundColor:
+              Colors.red.shade700,
+          content: const Text(
+            'Invalid product ID.',
+            style: TextStyle(
+              color: Colors.white,
             ),
           ),
-        );
-      }
-
-      return success;
-    } catch (e) {
-      debugPrint(
-        'ADD TO CART ERROR: $e',
+        ),
       );
 
-      if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(
-          SnackBar(
-            content:
-                Text('Could not add to cart: $e'),
-          ),
-        );
-      }
+    return false;
+  }
 
-      return false;
-    } finally {
-      if (mounted) {
-        setState(() {
-          _addingToCart = false;
-        });
-      }
+  setState(() {
+    _addingToCart = true;
+  });
+
+  try {
+    final success =
+        await cartNotifier.addToCart(
+      itemId: itemId,
+      quantity: _itemQuantity,
+    );
+
+    if (!mounted) {
+      return success;
+    }
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          backgroundColor: success
+              ? Colors.green.shade700
+              : Colors.red.shade700,
+          content: Text(
+            success
+                ? 'Item added to cart.'
+                : cartNotifier.error ??
+                    'Could not add item to cart.',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      );
+
+    return success;
+  } catch (e) {
+    if (!mounted) return false;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          backgroundColor:
+              Colors.red.shade700,
+          content: Text(
+            e
+                .toString()
+                .replaceFirst(
+                  'Exception: ',
+                  '',
+                ),
+            style: const TextStyle(
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+
+    return false;
+  } finally {
+    if (mounted) {
+      setState(() {
+        _addingToCart = false;
+      });
     }
   }
+}
 
   double _price(
       Map<String, dynamic> product,
@@ -882,12 +889,7 @@ class _ItemDetailScreenState
                                               return;
                                             }
 
-                                            Navigator
-                                                .pushNamed(
-                                              context,
-                                              AppRoutes
-                                                  .cart,
-                                            );
+                                            _openCart();
                                           },
                                 icon:
                                     const Icon(

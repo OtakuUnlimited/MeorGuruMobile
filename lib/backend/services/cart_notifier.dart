@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
-
+import 'auth_service.dart';
 import 'shop_service.dart';
+
 
 class CartNotifier extends ChangeNotifier {
   final ShopService _shopService = ShopService();
@@ -40,6 +41,15 @@ class CartNotifier extends ChangeNotifier {
         ? '9+'
         : itemCount.toString();
   }
+  String _cleanError(Object error) {
+  return error
+      .toString()
+      .replaceFirst('Exception: ', '')
+      .replaceFirst(
+        'Network request failed: ',
+        '',
+      );
+}
 
   double get subtotal {
     return _items.fold<double>(
@@ -68,61 +78,83 @@ class CartNotifier extends ChangeNotifier {
     );
   }
 
+  Future<bool> _requireLogin() async {
+  final token = await AuthService.getToken();
+
+  final loggedIn =
+      token != null && token.trim().isNotEmpty;
+
+  if (!loggedIn) {
+    _items = [];
+    _loading = false;
+    _error = 'Please log in to use the cart.';
+
+    notifyListeners();
+
+    return false;
+  }
+
+  return true;
+}
+
   // ============================================================
   // LOAD CART FROM LARAVEL SESSION
   // ============================================================
 
   Future<void> loadServerCart() async {
-    _loading = true;
-    _error = null;
-
-    notifyListeners();
-
-    try {
-      final response =
-          await _shopService.getCart();
-
-      debugPrint(
-        'SERVER CART RESPONSE: $response',
-      );
-
-      List<dynamic> serverItems = [];
-
-      if (response is Map) {
-        if (response['cart'] is List) {
-          serverItems = response['cart'];
-        } else if (response['data'] is List) {
-          serverItems = response['data'];
-        }
-      }
-
-      _items = serverItems.map((item) {
-        final cartItem =
-            Map<String, dynamic>.from(
-          item as Map,
-        );
-
-        cartItem['selected'] =
-            cartItem['selected'] ?? true;
-
-        return cartItem;
-      }).toList();
-    } catch (e, stackTrace) {
-      _items = [];
-      _error = e.toString();
-
-      debugPrint(
-        'LOAD SERVER CART ERROR: $e',
-      );
-
-      debugPrintStack(
-        stackTrace: stackTrace,
-      );
-    } finally {
-      _loading = false;
-      notifyListeners();
-    }
+  if (!await _requireLogin()) {
+    return;
   }
+
+  _loading = true;
+  _error = null;
+  notifyListeners();
+
+  try {
+    final response =
+        await _shopService.getCart();
+
+    debugPrint(
+      'SERVER CART RESPONSE: $response',
+    );
+
+    List<dynamic> serverItems = [];
+
+    if (response is Map) {
+      if (response['cart'] is List) {
+        serverItems = response['cart'];
+      } else if (response['data'] is List) {
+        serverItems = response['data'];
+      }
+    }
+
+    _items = serverItems.map((item) {
+      final cartItem =
+          Map<String, dynamic>.from(
+        item as Map,
+      );
+
+      cartItem['selected'] =
+          cartItem['selected'] ?? true;
+
+      return cartItem;
+    }).toList();
+  } catch (e, stackTrace) {
+    _items = [];
+    _error = _cleanError(e);
+
+    debugPrint(
+      'LOAD SERVER CART ERROR: $e',
+    );
+
+    debugPrintStack(
+      stackTrace: stackTrace,
+    );
+  } finally {
+    _loading = false;
+    notifyListeners();
+  }
+}
 
   Future<void> loadCart() async {
     await loadServerCart();
@@ -141,10 +173,12 @@ class CartNotifier extends ChangeNotifier {
 
     // Retained for compatibility with ItemDetailScreen.
     // Laravel only requires itemId and quantity.
-    Map<String, dynamic>? product,
-
-    int quantity = 1,
-  }) async {
+     Map<String, dynamic>? product,
+      int quantity = 1,
+    }) async {
+      if (!await _requireLogin()) {
+        return false;
+  }
     try {
       _error = null;
 
@@ -196,6 +230,9 @@ class CartNotifier extends ChangeNotifier {
     required int itemId,
     required int quantity,
   }) async {
+    if (!await _requireLogin()) {
+      return false;
+    }
     if (quantity <= 0) {
       return removeItem(itemId);
     }
@@ -250,6 +287,9 @@ class CartNotifier extends ChangeNotifier {
   Future<bool> increment({
     required int itemId,
   }) async {
+    if (!await _requireLogin()) {
+      return false;
+    }
     final index = _findItemIndex(itemId);
 
     if (index == -1) {
@@ -276,6 +316,9 @@ class CartNotifier extends ChangeNotifier {
   Future<bool> decrement({
     required int itemId,
   }) async {
+    if (!await _requireLogin()) {
+      return false;
+    }
     final index = _findItemIndex(itemId);
 
     if (index == -1) {
@@ -306,6 +349,9 @@ class CartNotifier extends ChangeNotifier {
   Future<bool> removeItem(
     int itemId,
   ) async {
+    if (!await _requireLogin()) {
+      return false;
+    }
     try {
       _error = null;
 
@@ -354,6 +400,9 @@ class CartNotifier extends ChangeNotifier {
 
   Future<bool> clearCart() async {
     try {
+      if (!await _requireLogin()) {
+        return false;
+      }
       _error = null;
 
       final response =
@@ -391,6 +440,14 @@ class CartNotifier extends ChangeNotifier {
 
       return false;
     }
+  }
+
+
+  void clearAfterLogout() {
+    _items = [];
+    _loading = false;
+    _error = null;
+    notifyListeners();
   }
 
   // ============================================================

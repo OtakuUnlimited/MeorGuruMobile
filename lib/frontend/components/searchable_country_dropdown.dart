@@ -91,10 +91,20 @@ class _SearchableCountryDropdownState
         decoration: InputDecoration(
           labelText: widget.label,
           filled: true,
-          fillColor: const Color(0xFFF8F9FA),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide.none,
+          fillColor: Colors.white,
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(4),
+            borderSide: BorderSide(
+              color: Colors.grey.shade300,
+              width: 1,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(4),
+            borderSide: const BorderSide(
+              color: Color(0xFFFA6400),
+              width: 1,
+            ),
           ),
         ),
       ),

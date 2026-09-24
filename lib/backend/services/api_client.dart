@@ -26,21 +26,9 @@ class ApiClient {
  Future<Map<String, String>> _getHeaders({
   bool requireAuth = false,
 }) async {
-  final laravelSession =
-      await CacheService.getString(
-    CacheKeys.laravelSession,
-  );
-  // debugPrint(
-  //   'Laravel Session: $laravelSession',
-  // );
   return {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-
-    if (laravelSession != null &&
-        laravelSession.isNotEmpty)
-      'Cookie':
-          laravelSession,
 
     if (requireAuth && _token != null)
       'Authorization': 'Bearer $_token',
@@ -98,27 +86,6 @@ Future<dynamic> get(
         body: jsonEncode(body),
       );
     
-      if (response.headers['set-cookie'] != null) {
-        
-    final cookies = response.headers['set-cookie'] ?? '';
-
-      String? laravelSession;
-
-      if (cookies != null) {
-        final match = RegExp(r'laravel_session=([^;]+)').firstMatch(cookies);
-
-        if (match != null) {
-          laravelSession = match.group(1);
-        }
-      }
-
-    await CacheService.save(
-        CacheKeys.laravelSession,
-        'laravel_session=$laravelSession',
-      );
-    
-
-      }
       return _processResponse(response);
     } on HttpException {
         rethrow;

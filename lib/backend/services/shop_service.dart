@@ -1,8 +1,6 @@
 import 'api_client.dart';
-import 'cache_keys.dart';
-import 'cache_service.dart';
-import 'package:flutter/foundation.dart';
 import 'auth_service.dart';
+import 'package:flutter/foundation.dart';
 class ShopService {
   final ApiClient _client = ApiClient();
 
@@ -118,121 +116,115 @@ class ShopService {
 
   //cart service
 
-  Future<dynamic> getCart({
-    String? couponCode,
-  }) async {
-    String url = 'checkout';
-    final token = await AuthService.getToken();
-    if (couponCode != null && couponCode.isNotEmpty) {
-      url += '?coupon_code=$couponCode';
-    }
-
-    return await _client.get(url, requireAuth: token != null);
-  }
-
   // ============================================================
-  // ADD TO CART
-  // ============================================================
+// CART AUTHENTICATION
+// ============================================================
 
-  Future<dynamic> addToCart({
-    required int itemId,
-    int quantity = 1,
-  }) async {
-    final token = await AuthService.getToken();
-    return await _client.post(
-      'add-to-cart',
-      {
-        'item_id': itemId,
-        'quantity': quantity,
-      },
-      requireAuth: token != null
+Future<void> _ensureLoggedIn() async {
+  final token = await AuthService.getToken();
+
+  if (token == null || token.trim().isEmpty) {
+    throw Exception(
+      'Please log in to use the cart.',
     );
   }
+}
 
-  // ============================================================
-  // UPDATE CART ITEM
-  // ============================================================
+// ============================================================
+// GET CART
+// ============================================================
 
-  Future<dynamic> updateCartItem({
-    required int itemId,
-    required int quantity,
-  }) async {
-    final token = await AuthService.getToken();
-    return await _client.put(
-      'update-cart-item',
-      {
-        'item_id': itemId,
-        'quantity': quantity,
-      },
-      requireAuth: token != null
+Future<dynamic> getCart({
+  String? couponCode,
+}) async {
+  await _ensureLoggedIn();
+
+  String url = 'checkout';
+
+  if (couponCode != null &&
+      couponCode.trim().isNotEmpty) {
+    final encodedCoupon = Uri.encodeQueryComponent(
+      couponCode.trim(),
     );
+
+    url += '?coupon_code=$encodedCoupon';
   }
 
-  // ============================================================
-  // REMOVE CART ITEM
-  // ============================================================
+  return _client.get(
+    url,
+    requireAuth: true,
+  );
+}
 
-  Future<dynamic> removeCartItem(
-    int itemId,
-  ) async {
-    final token = await AuthService.getToken();
-    return await _client.delete(
-      'delete-cart-item',
-      {
-        'item_id': itemId,
-      },
-      requireAuth: token != null
-    );
-  }
+// ============================================================
+// ADD TO CART
+// ============================================================
 
-  // ============================================================
-  // CLEAR CART
-  // ============================================================
+Future<dynamic> addToCart({
+  required int itemId,
+  int quantity = 1,
+}) async {
+  await _ensureLoggedIn();
 
-  Future<dynamic> clearCart() async {
-    final token = await AuthService.getToken();
-    return await _client.delete(
-      'clear-cart',
-      {},
-      requireAuth: token != null
-    );
-  }
+  return _client.post(
+    'add-to-cart',
+    {
+      'item_id': itemId,
+      'quantity': quantity,
+    },
+    requireAuth: true,
+  );
+}
 
-  // ============================================================
-  // SYNC LOCAL CART TO SERVER
-  // ============================================================
-  //
-  // Used when:
-  // Guest has items in local cart
-  //        ↓
-  // User logs in
-  //        ↓
-  // Local cart gets pushed to API
-  //
-  // ============================================================
+// ============================================================
+// UPDATE CART ITEM
+// ============================================================
 
-  Future<void> syncCart(
-    List<Map<String, dynamic>> items,
-  ) async {
-    for (final item in items) {
-      final itemId = int.tryParse(
-        item['item_id']?.toString() ??
-            item['id']?.toString() ??
-            '',
-      );
+Future<dynamic> updateCartItem({
+  required int itemId,
+  required int quantity,
+}) async {
+  await _ensureLoggedIn();
 
-      final quantity = int.tryParse(
-        item['quantity']?.toString() ?? '1',
-      ) ?? 1;
+  return _client.put(
+    'update-cart-item',
+    {
+      'item_id': itemId,
+      'quantity': quantity,
+    },
+    requireAuth: true,
+  );
+}
 
-      if (itemId == null) {
-        continue;
-      }
+// ============================================================
+// REMOVE CART ITEM
+// ============================================================
 
-      await addToCart(
-        itemId: itemId,
-        quantity: quantity,
-      );
-    }
-  }
+Future<dynamic> removeCartItem(
+  int itemId,
+) async {
+  await _ensureLoggedIn();
+
+  return _client.delete(
+    'delete-cart-item',
+    {
+      'item_id': itemId,
+    },
+    requireAuth: true,
+  );
+}
+
+// ============================================================
+// CLEAR CART
+// ============================================================
+
+Future<dynamic> clearCart() async {
+  await _ensureLoggedIn();
+
+  return _client.delete(
+    'clear-cart',
+    {},
+    requireAuth: true,
+  );
+}
 }
