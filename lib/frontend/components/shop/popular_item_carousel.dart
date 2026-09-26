@@ -9,6 +9,44 @@ class PopularItemsCarousel
   final Function(Map<String, dynamic>)?
       onItemTap;
 
+      double? _getDiscountPercentage(
+  Map<String, dynamic> item,
+) {
+  final value = item['discount_percentage'];
+
+  if (value == null) {
+    return null;
+  }
+
+  final percentage =
+      double.tryParse(value.toString());
+
+  if (percentage == null || percentage <= 0) {
+    return null;
+  }
+
+  return percentage;
+}
+
+double? _getDiscountAmount(
+  Map<String, dynamic> item,
+) {
+  final value = item['discount_amount'];
+
+  if (value == null) {
+    return null;
+  }
+
+  final amount =
+      double.tryParse(value.toString());
+
+  if (amount == null || amount <= 0) {
+    return null;
+  }
+
+  return amount;
+}
+
   const PopularItemsCarousel({
     super.key,
     required this.items,
@@ -77,18 +115,30 @@ class PopularItemsCarousel
                 onItemTap?.call(item),
             child: ProductCard(
               width: 164,
-              title:
-                  item['name']?.toString() ??
-                      '',
+
+              title: item['name']?.toString() ?? '',
+
+              englishName:
+                  item['english_name']?.toString(),
+
               priceString:
                   '\$${originalPrice.toStringAsFixed(2)} AUD',
+
               discountedPriceString:
                   hasDiscount
-                      ? '\$${discountedPrice.toStringAsFixed(2)} AUD'
+                      ? '\$${discountedPrice!.toStringAsFixed(2)} AUD'
                       : null,
+
               imagePathUrl: image,
+
               inStock: inStock,
-            ),
+
+              discountPercentage:
+                  _getDiscountPercentage(item),
+
+              discountAmount:
+                  _getDiscountAmount(item),
+            )
           );
         },
       ),

@@ -281,6 +281,33 @@ class _ItemDetailScreenState
           discountedPrice != null &&
           discountedPrice < originalPrice;
 
+      final discount = product['discount'];
+
+      final discountType =
+          discount is Map
+              ? discount['discount_type']?.toString().toLowerCase()
+              : null;
+
+      final discountValue = double.tryParse(
+        discount is Map
+            ? discount['discount_value']?.toString() ?? '0'
+            : '0',
+      );
+
+      final discountPercentage =
+          discountType == 'percentage' &&
+                  discountValue != null &&
+                  discountValue > 0
+              ? discountValue
+              : null;
+
+      final discountAmount =
+          discountType == 'amount' &&
+                  discountValue != null &&
+                  discountValue > 0
+              ? discountValue
+              : null;
+
       final images = product['images'];
 
       final image =
@@ -290,14 +317,39 @@ class _ItemDetailScreenState
 
       return ProductCard(
         width: width,
+
         title:
             product['name']?.toString() ?? '',
+
+        englishName:
+            product['english_name']?.toString(),
+
         priceString:
             '\$${originalPrice.toStringAsFixed(2)} AUD',
+
         discountedPriceString: hasDiscount
-            ? '\$${discountedPrice.toStringAsFixed(2)} AUD'
+            ? '\$${discountedPrice!.toStringAsFixed(2)} AUD'
             : null,
+
+        discountPercentage: hasDiscount
+                      ? (product['discount']?['type']?.toString() =='percentage'
+                          ? double.tryParse(
+                              product['discount']?['value']
+                                  ?.toString() ?? '0',
+                            )
+                          : null)
+                        : null,
+                        discountAmount: hasDiscount
+                      ? (product['discount']?['type']?.toString() =='fixed'
+                          ? double.tryParse(
+                              product['discount']?['value']
+                                  ?.toString() ?? '0',
+                            )
+                          : null)
+                        : null,
+
         imagePathUrl: image,
+
         inStock: _inStock(product),
       );
     }
@@ -312,9 +364,9 @@ class _ItemDetailScreenState
   ) {
     return Scaffold(
       appBar: const CustomTopNavBar(
-        title: 'Item Detail',
+        title: 'Product Details',
         style:
-            NavBarStyle.BrandedLight,
+            NavBarStyle.Shop,
         showBack: true,
         showCart: true,
       ),
@@ -374,6 +426,25 @@ class _ItemDetailScreenState
                                       fontWeight:
                                           FontWeight
                                               .bold,
+                                      color:
+                                          AppColors
+                                              .orangeMain,
+                                    ),
+                                  ),
+
+                                  const SizedBox(
+                                    height: 6,
+                                  ),
+
+                                  Text(
+                                    _product![
+                                        'english_name'],
+                                    style:
+                                        const TextStyle(
+                                      fontSize:
+                                          18,
+                                      fontWeight:
+                                          FontWeight.w400,
                                       color:
                                           AppColors
                                               .textDark,

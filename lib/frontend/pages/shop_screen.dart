@@ -278,6 +278,7 @@ Future<void> _searchProducts(String query) async {
                     product['discounted_price']?.toString() ??
                         '',
                   );
+                  
 
                   final hasDiscount =
                       discountedPrice != null &&
@@ -300,11 +301,29 @@ Future<void> _searchProducts(String query) async {
                     child: ProductCard(
                       title:
                           product['name']?.toString() ?? '',
+                      englishName:
+                          product['english_name']?.toString() ?? '',
                       priceString:
                           '\$${originalPrice.toStringAsFixed(2)} AUD',
                       discountedPriceString: hasDiscount
                           ? '\$${discountedPrice.toStringAsFixed(2)} AUD'
                           : null,
+                      discountPercentage: hasDiscount
+                      ? (product['discount']?['type']?.toString() =='percentage'
+                          ? double.tryParse(
+                              product['discount']?['value']
+                                  ?.toString() ?? '0',
+                            )
+                          : null)
+                        : null,
+                        discountAmount: hasDiscount
+                      ? (product['discount']?['type']?.toString() =='fixed'
+                          ? double.tryParse(
+                              product['discount']?['value']
+                                  ?.toString() ?? '0',
+                            )
+                          : null)
+                        : null,
                       imagePathUrl: image.toString(),
                       inStock: inStock,
                     ),

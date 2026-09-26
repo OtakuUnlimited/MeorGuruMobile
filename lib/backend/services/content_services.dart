@@ -3,6 +3,7 @@ import 'cache_service.dart';
 import 'cache_keys.dart';
 import 'package:flutter/foundation.dart';
 
+
 class ContentService {
   final ApiClient _client = ApiClient();
 
@@ -16,7 +17,7 @@ class ContentService {
       CacheKeys.gurus,
       data.take(20).toList(),
     );
-
+  debugPrint('GET GURUS RESPONSE: $response');
     return data;
   } catch (e) {
     return CacheService.getList(

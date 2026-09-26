@@ -274,7 +274,6 @@ class _CartScreenState extends State<CartScreen> {
         title: 'Your Cart',
         style: NavBarStyle.BrandedLight,
         showBack: true,
-        showCart: true,
       ),
 
       body: _loading

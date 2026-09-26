@@ -4,20 +4,31 @@ import '../../../constants.dart';
 /// Product Grid/List Card used in Shop layout grids and Detail section related lists
 class ProductCard extends StatelessWidget {
   final double? width;
+
   final String title;
+  final String? englishName;
+
   final String priceString;
   final String? discountedPriceString;
+
   final String imagePathUrl;
   final bool? inStock;
+
+  // Discount information
+  final double? discountPercentage;
+  final double? discountAmount;
 
   const ProductCard({
     super.key,
     this.width,
     required this.title,
+    this.englishName,
     required this.priceString,
     this.discountedPriceString,
     required this.imagePathUrl,
     this.inStock,
+    this.discountPercentage,
+    this.discountAmount,
   });
 
   @override
@@ -26,6 +37,16 @@ class ProductCard extends StatelessWidget {
         discountedPriceString != null &&
         discountedPriceString!.isNotEmpty &&
         discountedPriceString != priceString;
+
+    String? discountText;
+
+    if (discountPercentage != null && discountPercentage! > 0) {
+      discountText =
+          '${discountPercentage!.toStringAsFixed(0)}% OFF';
+    } else if (discountAmount != null && discountAmount! > 0) {
+      discountText =
+          '\$${discountAmount!.toStringAsFixed(2)} OFF';
+    }
 
     return Container(
       width: width,
@@ -44,122 +65,170 @@ class ProductCard extends StatelessWidget {
         ],
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // IMAGE + BADGES
           Expanded(
-            child: ClipRRect(
-              borderRadius:
-                  const BorderRadius.vertical(
-                top: Radius.circular(16),
-              ),
-              child: imagePathUrl.isEmpty
-                  ? Container(
-                      width: double.infinity,
-                      color: Colors.grey.shade100,
-                      child: const Icon(
-                        Icons.image_not_supported_outlined,
-                        color: Colors.grey,
+            child: Stack(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(16),
+                  ),
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: double.infinity,
+                    child: imagePathUrl.isEmpty
+                        ? Container(
+                            color: Colors.grey.shade100,
+                            child: const Icon(
+                              Icons.image_not_supported_outlined,
+                              color: Colors.grey,
+                            ),
+                          )
+                        : Image.network(
+                            imagePathUrl,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                            errorBuilder: (_, __, ___) {
+                              return Container(
+                                color: Colors.grey.shade100,
+                                child: const Icon(
+                                  Icons.broken_image_outlined,
+                                  color: Colors.grey,
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ),
+
+                // DISCOUNT - TOP RIGHT
+                if (discountText != null)
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
                       ),
-                    )
-                  : Image.network(
-                      imagePathUrl,
-                      fit: BoxFit.cover,
-                      width: double.infinity,
-                      errorBuilder: (_, __, ___) =>
-                          Container(
-                        color: Colors.grey.shade100,
-                        child: const Icon(
-                          Icons.broken_image_outlined,
-                          color: Colors.grey,
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        discountText,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                     ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: AppColors.textDark,
                   ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.end,
-                  children: [
-                    Expanded(
-                      child: hasDiscount
-                          ? Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment
-                                      .start,
-                              children: [
-                                Text(
-                                  priceString,
-                                  style:
-                                      const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey,
-                                    decoration:
-                                        TextDecoration
-                                            .lineThrough,
-                                  ),
-                                ),
-                                const SizedBox(
-                                  height: 2,
-                                ),
-                                Text(
-                                  discountedPriceString!,
-                                  style:
-                                      const TextStyle(
-                                    fontSize: 14,
-                                    color: AppColors
-                                        .orangeMain,
-                                    fontWeight:
-                                        FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : Text(
-                              priceString,
-                              style:
-                                  const TextStyle(
-                                fontSize: 14,
-                                color: AppColors
-                                    .orangeMain,
-                                fontWeight:
-                                    FontWeight.bold,
-                              ),
-                            ),
-                    ),
-                    if (inStock != null)
-                      Text(
+
+                // STOCK - BOTTOM LEFT
+                if (inStock != null)
+                  Positioned(
+                    left: 8,
+                    bottom: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
                         inStock!
                             ? 'In Stock'
                             : 'Out of Stock',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
+                        style: const TextStyle(
+                          color: Colors.white,
                           fontSize: 11,
-                          fontWeight:
-                              FontWeight.bold,
-                          color: inStock!
-                              ? Colors.green
-                              : Colors.red,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                  ],
+                    ),
+                  ),
+              ],
+            ),
+          ),
+
+          // PRODUCT INFORMATION
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ORIGINAL / LOCAL NAME
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: AppColors.maroonRed,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
+
+                // ENGLISH NAME
+                if (englishName != null &&
+                    englishName!.trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      englishName!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
+
+                const SizedBox(height: 8),
+
+                // PRICE
+                if (hasDiscount)
+                  Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        priceString,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          decoration:
+                              TextDecoration.lineThrough,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        discountedPriceString!,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: AppColors.orangeMain,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  )
+                else
+                  Text(
+                    priceString,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: AppColors.orangeMain,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
               ],
             ),
           ),

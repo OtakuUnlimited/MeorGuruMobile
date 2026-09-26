@@ -28,15 +28,7 @@ class _FindGurusScreenState extends State<FindGurusScreen> {
       appBar: CustomTopNavBar(
         title: "Gurus",
         showMenu: true,
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.shopping_cart,
-              color: Colors.black,
-            ),
-            onPressed: () {},
-          )
-        ],
+        style: NavBarStyle.BrandedLight,
       ),
       body: FutureBuilder<List<dynamic>>(
         future: gurusFuture,

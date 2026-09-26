@@ -120,7 +120,7 @@ class _ShopSearchBannerState
         ),
         const SizedBox(width: 10),
         SizedBox(
-          height: 52,
+          height: 46,
           child: ElevatedButton(
             onPressed:
                 _searching ? null : _submitSearch,
@@ -139,8 +139,8 @@ class _ShopSearchBannerState
             ),
             child: _searching
                 ? const SizedBox(
-                    width: 21,
-                    height: 21,
+                    width: 18,
+                    height: 18,
                     child:
                         CircularProgressIndicator(
                       strokeWidth: 2.3,

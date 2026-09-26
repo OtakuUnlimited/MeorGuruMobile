@@ -13,6 +13,7 @@ enum NavBarStyle {
   DarkAuth,
   MinimalAccent,
   TransAuth,
+  Shop,
 }
 
 class CustomTopNavBar extends StatelessWidget
@@ -25,6 +26,7 @@ class CustomTopNavBar extends StatelessWidget
   final bool showSettings;
   final bool showBookings;
   final bool showCart;
+  final bool showHelp;
 
   final List<Widget>? actions;
 
@@ -37,6 +39,7 @@ class CustomTopNavBar extends StatelessWidget
     this.showProfile = false,
     this.showSettings = false,
     this.showBookings = false,
+    this.showHelp = false,
     this.showCart = false,
     this.actions,
   }) : super(key: key);
@@ -156,7 +159,7 @@ class CustomTopNavBar extends StatelessWidget
                   decoration:
                       BoxDecoration(
                     color:
-                        AppColors.orangeMain,
+                        AppColors.maroonRed,
                     borderRadius:
                         BorderRadius.circular(
                       10,
@@ -199,6 +202,7 @@ class CustomTopNavBar extends StatelessWidget
     Color appBarBgColor;
     Color iconAndTextColor;
     double elevationValue;
+    
 
     switch (style) {
       case NavBarStyle.DarkAuth:
@@ -220,6 +224,12 @@ class CustomTopNavBar extends StatelessWidget
         appBarBgColor = Colors.white;
         iconAndTextColor =
             AppColors.textDark;
+        elevationValue = 0.0;
+        break;
+
+        case NavBarStyle.Shop:
+        appBarBgColor = AppColors.orangeMain;
+        iconAndTextColor = Colors.white;
         elevationValue = 0.0;
         break;
 
@@ -360,6 +370,21 @@ class CustomTopNavBar extends StatelessWidget
                 _handleProfileTap(
               context,
             ),
+          ),
+
+        if (showHelp)
+          IconButton(
+            icon: Icon(
+              Icons.help_outline,
+              color:
+                  iconAndTextColor,
+            ),
+           onPressed: () {
+              Navigator.pushNamed(
+                context,
+                AppRoutes.supportHelp,
+              );
+            },
           ),
       ],
     );

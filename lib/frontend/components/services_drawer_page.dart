@@ -35,7 +35,7 @@ class ServicesDrawerPage extends StatelessWidget {
                   GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 4,
+                    crossAxisCount: 5,
                     mainAxisSpacing: 24,
                     crossAxisSpacing: 8,
                     childAspectRatio: 0.8,
@@ -92,6 +92,20 @@ class ServicesDrawerPage extends StatelessWidget {
                           Navigator.pushNamed(
                             context,
                             AppRoutes.auspiciousCalender,
+                          );
+                        },
+                      ),
+
+                      _buildDrawerIcon(
+                        context,
+                        Icons.book,
+                        "Puja\nMaterials",
+                        () {
+                          Navigator.pop(context);
+
+                          Navigator.pushNamed(
+                            context,
+                            AppRoutes.pujaMaterials,
                           );
                         },
                       ),

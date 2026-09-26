@@ -3,6 +3,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'api_client.dart';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   final ApiClient _client = ApiClient();
@@ -201,5 +202,54 @@ Future<dynamic> deleteCurrentRole() async {
   );
 }
 
+Future<dynamic> forgotPassword(String email) async {
+  final response = await _client.post(
+    'user/forgot-password',
+    {
+      'email': email,
+    },
+  );
+  debugPrint(
+  '========== FORGOT PASSWORD RESPONSE ==========',
+);
 
+debugPrint(
+  'Response type: ${response.runtimeType}',
+);
+
+debugPrint(
+  'Full response: $response',
+);
+  return response;
+}
+
+Future<dynamic> resetPassword({
+  required String email,
+  required String otp,
+  required String newPassword,
+}) async {
+  final response = await _client.post(
+    'user/reset-password',
+    {
+      'email': email,
+      'otp': otp,
+      'new_password': newPassword,
+    },
+  );
+
+  debugPrint(
+    '========== RESET PASSWORD RESPONSE ==========',
+  );
+
+  debugPrint(
+    'Response type: ${response.runtimeType}',
+  );
+
+  debugPrint(
+    'Full response: $response',
+  );
+
+  return response;
+
+}
 }

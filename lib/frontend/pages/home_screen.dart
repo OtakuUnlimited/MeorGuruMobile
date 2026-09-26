@@ -33,6 +33,7 @@ class _HomeScreenState extends State<HomeScreen> {
         title: "Mero Guru",
         style: NavBarStyle.BrandedLight,
         showMenu: true,
+        showHelp: true,
         showProfile: true,
         showCart: true,
       ),

@@ -3,6 +3,7 @@ import '../components/event_package_card.dart';
 import '../../backend/services/content_services.dart';
 import '../../routes/app_routes.dart';
 import '../components/top_nav_bar.dart';
+import '../components/bottom_nav_bar.dart';
 
 class EventPackagesScreen extends StatefulWidget {
   const EventPackagesScreen({Key? key}) : super(key: key);
@@ -141,6 +142,9 @@ class _EventPackagesScreenState
                 ],
               ),
             ),
+            bottomNavigationBar: const CustomBottomNavBar(
+        activeIndex: 3,
+      ),
     );
   }
 }
