@@ -45,6 +45,72 @@ class _CartScreenState extends State<CartScreen> {
     });
   }
 
+  Future<bool> _confirmRemoval({
+  required String message,
+}) async {
+  final confirmed = await showDialog<bool>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) {
+      return AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: const Row(
+          children: [
+            Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.red,
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Remove Item',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(
+                dialogContext,
+                false,
+              );
+            },
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Colors.black54,
+              ),
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              elevation: 0,
+            ),
+            onPressed: () {
+              Navigator.pop(
+                dialogContext,
+                true,
+              );
+            },
+            child: const Text('Remove'),
+          ),
+        ],
+      );
+    },
+  );
+
+  return confirmed ?? false;
+}
+
   // ============================================================
   // SELECT ALL
   // ============================================================
@@ -148,26 +214,76 @@ class _CartScreenState extends State<CartScreen> {
   // ============================================================
 
   Future<void> _removeItem(
-    int itemId,
-  ) async {
-    setState(() {
-      _updating = true;
-    });
+  int itemId, {
+  String? itemName,
+}) async {
+  if (_updating) return;
 
-    try {
-      await cartNotifier.removeItem(itemId);
-    } catch (e) {
-      debugPrint(
-        'Remove cart item error: $e',
-      );
-    }
+  final confirmed = await _confirmRemoval(
+    message: itemName != null &&
+            itemName.trim().isNotEmpty
+        ? 'Are you sure you want to remove '
+            '"$itemName" from your cart?'
+        : 'Are you sure you want to remove '
+            'this item from your cart?',
+  );
+
+  if (!confirmed || !mounted) return;
+
+  setState(() {
+    _updating = true;
+  });
+
+  try {
+    final success =
+        await cartNotifier.removeItem(itemId);
 
     if (!mounted) return;
 
-    setState(() {
-      _updating = false;
-    });
+    if (!success) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              cartNotifier.error ??
+                  'Could not remove the item.',
+              style: const TextStyle(
+                color: Colors.white,
+              ),
+            ),
+            backgroundColor: Colors.red,
+          ),
+        );
+    }
+  } catch (error) {
+    debugPrint(
+      'Remove cart item error: $error',
+    );
+
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Could not remove the item.',
+            style: TextStyle(
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _updating = false;
+      });
+    }
   }
+}
 
 // ============================================================
   // change quantity
@@ -207,44 +323,104 @@ class _CartScreenState extends State<CartScreen> {
   // ============================================================
 
   Future<void> _deleteSelectedItems(
-    List<Map<String, dynamic>> items,
-  ) async {
-    final selectedItems = items
-        .where(
-          (item) => item['selected'] == true,
-        )
-        .toList();
+  List<Map<String, dynamic>> items,
+) async {
+  if (_updating) return;
 
-    if (selectedItems.isEmpty) {
-      return;
-    }
+  final selectedItems = items.where(
+    (item) => item['selected'] == true,
+  ).toList();
 
-    setState(() {
-      _updating = true;
-    });
-
-    try {
-      for (final item in selectedItems) {
-        final id = int.tryParse(
-        (item['item_id'] ?? item['id']).toString(),
+  if (selectedItems.isEmpty) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Please select at least one item.',
+            style: TextStyle(
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: Colors.red,
+        ),
       );
 
-        if (id != null) {
-          await cartNotifier.removeItem(id);
+    return;
+  }
+
+  final confirmed = await _confirmRemoval(
+    message: selectedItems.length == 1
+        ? 'Are you sure you want to remove '
+            'the selected item from your cart?'
+        : 'Are you sure you want to remove '
+            'all ${selectedItems.length} selected '
+            'items from your cart?',
+  );
+
+  if (!confirmed || !mounted) return;
+
+  setState(() {
+    _updating = true;
+  });
+
+  try {
+    for (final item in selectedItems) {
+      final itemId = int.tryParse(
+        (
+          item['item_id'] ??
+          item['id'] ??
+          ''
+        ).toString(),
+      );
+
+      if (itemId != null) {
+        final success =
+            await cartNotifier.removeItem(
+          itemId,
+        );
+
+        if (!success) {
+          throw Exception(
+            cartNotifier.error ??
+                'Could not remove an item.',
+          );
         }
       }
-    } catch (e) {
-      debugPrint(
-        'Delete selected items error: $e',
-      );
     }
+  } catch (error) {
+    debugPrint(
+      'Delete selected items error: $error',
+    );
 
     if (!mounted) return;
 
-    setState(() {
-      _updating = false;
-    });
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            error
+                .toString()
+                .replaceFirst(
+                  'Exception: ',
+                  '',
+                ),
+            style: const TextStyle(
+              color: Colors.white,
+            ),
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _updating = false;
+      });
+    }
   }
+}
 
   // ============================================================
   // CHECKOUT

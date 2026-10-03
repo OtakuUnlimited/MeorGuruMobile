@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../constants.dart';
 import '../../backend/services/shop_service.dart';
@@ -6,6 +7,11 @@ import '../components/bottom_nav_bar.dart';
 import '../components/top_nav_bar.dart';
 import '../components/shop/checkout_order_tile.dart';
 import '../components/shop/checkout_summary_card.dart';
+import '../components/searchable_state_dropdown.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+
+import '../../backend/services/cart_notifier.dart';
+import '../../routes/app_routes.dart';
 
 class CheckOutScreen extends StatefulWidget {
   const CheckOutScreen({super.key});
@@ -21,29 +27,36 @@ class _CheckOutScreenState
 
   final _formKey = GlobalKey<FormState>();
 
-  final _firstNameController =
-      TextEditingController();
+  bool _processingPayment = false;
 
-  final _lastNameController =
-      TextEditingController();
+final _fullNameController =
+    TextEditingController();
 
-  final _emailController =
-      TextEditingController();
+final _emailController =
+    TextEditingController();
 
-  final _phoneController =
-      TextEditingController();
+final _phoneController =
+    TextEditingController();
 
-  final _streetController =
-      TextEditingController();
+final _suburbController =
+    TextEditingController();
 
-  final _cityController =
-      TextEditingController();
+final _postcodeController =
+    TextEditingController();
 
-  final _countryController =
-      TextEditingController();
+final _deliveryAddressController =
+    TextEditingController();
 
-  final _voucherController =
-      TextEditingController();
+final _voucherController =
+    TextEditingController();
+
+static const String _deliveryCountry =
+    'Australia';
+
+static const String _countryCode = '+61';
+
+String? _deliveryState;
+
 
   bool _loading = true;
   bool _applyingCoupon = false;
@@ -132,6 +145,17 @@ class _CheckOutScreenState
       });
     }
   }
+  String _formattedAustralianPhone() {
+  var phone = _phoneController.text
+      .replaceAll(RegExp(r'\D'), '');
+
+  // 0412 345 678 becomes +61 412 345 678.
+  if (phone.startsWith('0')) {
+    phone = phone.substring(1);
+  }
+
+  return '+61$phone';
+}
 
   double _toDouble(dynamic value) {
     return double.tryParse(
@@ -213,6 +237,40 @@ class _CheckOutScreenState
   }
 }
 
+void _showError(String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+}
+
+void _showSuccess(String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: Colors.green.shade700,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+}
+
   Future<void> _applyVoucher() async {
     final code =
         _voucherController.text.trim();
@@ -234,104 +292,225 @@ class _CheckOutScreenState
     });
   }
 
-  void _proceedToPay() {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+  Future<void> _proceedToPay() async {
+  if (_processingPayment) return;
 
-    if (_checkoutItems.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Your cart is empty.',
-          ),
-        ),
-      );
+  FocusScope.of(context).unfocus();
 
-      return;
-    }
-
-    final checkoutData = {
-      'first_name':
-          _firstNameController.text.trim(),
-      'last_name':
-          _lastNameController.text.trim(),
-      'email': _emailController.text.trim(),
-      'phone': _phoneController.text.trim(),
-      'street':
-          _streetController.text.trim(),
-      'city': _cityController.text.trim(),
-      'country':
-          _countryController.text.trim(),
-      'coupon_code':
-          _voucherController.text.trim(),
-      'total': _total,
-      'items': _checkoutItems,
-    };
-
-    debugPrint(
-      'CHECKOUT DATA: $checkoutData',
-    );
-
-    // Connect your payment/order API here.
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Checkout details are ready.',
-        ),
-      ),
-    );
+  if (!_formKey.currentState!.validate()) {
+    return;
   }
 
-  Widget _input({
-    required String label,
-    required String placeholder,
-    required TextEditingController controller,
-    TextInputType keyboardType =
-        TextInputType.text,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 14,
-      ),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        validator: (value) {
-          if (value == null ||
-              value.trim().isEmpty) {
-            return '$label is required';
-          }
+  if (_deliveryState == null ||
+      _deliveryState!.trim().isEmpty) {
+    _showError(
+      'Please select an Australian state.',
+    );
+    return;
+  }
 
-          return null;
-        },
-        decoration: InputDecoration(
+  if (_checkoutItems.isEmpty) {
+    _showError('Your cart is empty.');
+    return;
+  }
+
+  setState(() {
+    _processingPayment = true;
+  });
+
+  try {
+    final response =
+        await _shopService.createCheckout(
+      receiverName:
+          _fullNameController.text,
+      receiverEmail:
+          _emailController.text,
+      receiverPhone:
+          _formattedAustralianPhone(),
+      address:
+          _deliveryAddressController.text,
+      country: _deliveryCountry,
+      state: _deliveryState,
+      suburb: _suburbController.text,
+      postCode: _postcodeController.text,
+      couponCode:
+          _voucherController.text.trim().isEmpty
+              ? null
+              : _voucherController.text.trim(),
+    );
+
+    debugPrint(
+      'ECOMMERCE CHECKOUT RESPONSE: $response',
+    );
+
+    if (response['success'] != true) {
+      throw Exception(
+        response['message']?.toString() ??
+            'Checkout could not be started.',
+      );
+    }
+
+    final clientSecret =
+        response['client_secret']?.toString();
+
+    final publishableKey =
+        response['publishable_key']?.toString();
+
+    final orderNumber =
+        response['order_number']?.toString();
+
+    if (clientSecret == null ||
+        clientSecret.isEmpty) {
+      throw Exception(
+        'Stripe client secret is missing.',
+      );
+    }
+
+    /*
+     * Use the publishable key returned by the same
+     * Laravel server that created the PaymentIntent.
+     * This prevents Stripe account mismatch errors.
+     */
+    if (publishableKey != null &&
+        publishableKey.isNotEmpty &&
+        Stripe.publishableKey != publishableKey) {
+      Stripe.publishableKey = publishableKey;
+      Stripe.urlScheme = 'meroguru';
+
+      await Stripe.instance.applySettings();
+    }
+
+    await Stripe.instance.initPaymentSheet(
+      paymentSheetParameters:
+          SetupPaymentSheetParameters(
+        paymentIntentClientSecret:
+            clientSecret,
+        merchantDisplayName: 'Mero Guru',
+        style: ThemeMode.system,
+      ),
+    );
+
+    await Stripe.instance.presentPaymentSheet();
+
+    if (!mounted) return;
+
+    _showSuccess(
+      orderNumber == null
+          ? 'Payment completed successfully.'
+          : 'Order $orderNumber placed successfully.',
+    );
+
+    /*
+     * Refresh the cart after Laravel/webhook clears it.
+     */
+    await cartNotifier.refresh();
+
+    if (!mounted) return;
+
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      AppRoutes.shop,
+      (route) => route.isFirst,
+    );
+  } on StripeException catch (error) {
+    if (!mounted) return;
+
+    if (error.error.code ==
+        FailureCode.Canceled) {
+      _showError('Payment was cancelled.');
+      return;
+    }
+
+    _showError(
+      error.error.localizedMessage ??
+          'Stripe payment failed.',
+    );
+  } catch (error, stackTrace) {
+    debugPrint(
+      'ECOMMERCE PAYMENT ERROR: $error',
+    );
+    debugPrintStack(
+      stackTrace: stackTrace,
+    );
+
+    if (!mounted) return;
+
+    var message = error
+        .toString()
+        .replaceFirst('Exception: ', '')
+        .replaceFirst('HttpException: ', '');
+
+    _showError(message);
+  } finally {
+    if (mounted) {
+      setState(() {
+        _processingPayment = false;
+      });
+    }
+  }
+}
+
+  Widget _input({
+  required String label,
+  required String placeholder,
+  required TextEditingController controller,
+  TextInputType keyboardType =
+      TextInputType.text,
+  List<TextInputFormatter>?
+      inputFormatters,
+  int? maxLength,
+  String? Function(String?)? validator,
+}) {
+  return Padding(
+    padding: const EdgeInsets.only(
+      bottom: 16,
+    ),
+    child: TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      maxLength: maxLength,
+      validator: validator ??
+          (value) {
+            if (value == null ||
+                value.trim().isEmpty) {
+              return '$label is required';
+            }
+
+            return null;
+          },
+      decoration: InputDecoration(
         labelText: label,
         hintText: placeholder,
+        counterText: '',
         filled: false,
-        contentPadding: const EdgeInsets.symmetric(
+        contentPadding:
+            const EdgeInsets.symmetric(
           horizontal: 2,
           vertical: 12,
         ),
-        enabledBorder: const UnderlineInputBorder(
+        enabledBorder:
+            const UnderlineInputBorder(
           borderSide: BorderSide(
             color: Color(0xFFBDBDBD),
             width: 1,
           ),
         ),
-        focusedBorder: const UnderlineInputBorder(
+        focusedBorder:
+            const UnderlineInputBorder(
           borderSide: BorderSide(
             color: AppColors.orangeMain,
             width: 2,
           ),
         ),
-        errorBorder: const UnderlineInputBorder(
+        errorBorder:
+            const UnderlineInputBorder(
           borderSide: BorderSide(
             color: Colors.red,
             width: 1,
           ),
         ),
-        focusedErrorBorder: 
+        focusedErrorBorder:
             const UnderlineInputBorder(
           borderSide: BorderSide(
             color: Colors.red,
@@ -339,23 +518,199 @@ class _CheckOutScreenState
           ),
         ),
       ),
+    ),
+  );
+}
+
+Widget _fixedCountryField() {
+  return Padding(
+    padding: const EdgeInsets.only(
+      bottom: 16,
+    ),
+    child: TextFormField(
+      initialValue: _deliveryCountry,
+      readOnly: true,
+      enableInteractiveSelection: false,
+      decoration: const InputDecoration(
+        labelText: 'Country',
+        suffixIcon: Icon(
+          Icons.lock_outline,
+          size: 18,
+        ),
+        contentPadding:
+            EdgeInsets.symmetric(
+          horizontal: 2,
+          vertical: 12,
+        ),
+        enabledBorder:
+            UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: Color(0xFFBDBDBD),
+          ),
+        ),
+        focusedBorder:
+            UnderlineInputBorder(
+          borderSide: BorderSide(
+            color: AppColors.orangeMain,
+            width: 2,
+          ),
+        ),
       ),
-    );
-  }
+    ),
+  );
+}
+
+Widget _australianPhoneField() {
+  return Padding(
+    padding: const EdgeInsets.only(
+      bottom: 16,
+    ),
+    child: Column(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Phone Number',
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.black54,
+          ),
+        ),
+
+        Row(
+          crossAxisAlignment:
+              CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 55,
+              alignment: Alignment.center,
+              padding:
+                  const EdgeInsets.symmetric(
+                horizontal: 14,
+              ),
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: Color(0xFFBDBDBD),
+                  ),
+                ),
+              ),
+              child: const Row(
+                children: [
+                  Text(
+                    '🇦🇺',
+                    style: TextStyle(
+                      fontSize: 19,
+                    ),
+                  ),
+                  SizedBox(width: 7),
+                  Text(
+                    _countryCode,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight:
+                          FontWeight.w600,
+                    ),
+                  ),
+                  SizedBox(width: 5),
+                  Icon(
+                    Icons.lock_outline,
+                    size: 16,
+                    color: Colors.black45,
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(width: 12),
+
+            Expanded(
+              child: TextFormField(
+                controller: _phoneController,
+                keyboardType:
+                    TextInputType.phone,
+                maxLength: 10,
+                inputFormatters: [
+                  FilteringTextInputFormatter
+                      .digitsOnly,
+                  LengthLimitingTextInputFormatter(
+                    10,
+                  ),
+                ],
+                validator: (value) {
+                  final phone =
+                      value?.trim() ?? '';
+
+                  if (phone.isEmpty) {
+                    return 'Phone number is required';
+                  }
+
+                  if (phone.length < 9 ||
+                      phone.length > 10) {
+                    return 'Enter a valid Australian phone number';
+                  }
+
+                  return null;
+                },
+                decoration:
+                    const InputDecoration(
+                  hintText: '4XX XXX XXX',
+                  counterText: '',
+                  contentPadding:
+                      EdgeInsets.symmetric(
+                    horizontal: 2,
+                    vertical: 16,
+                  ),
+                  enabledBorder:
+                      UnderlineInputBorder(
+                    borderSide: BorderSide(
+                      color:
+                          Color(0xFFBDBDBD),
+                    ),
+                  ),
+                  focusedBorder:
+                      UnderlineInputBorder(
+                    borderSide: BorderSide(
+                      color:
+                          AppColors.orangeMain,
+                      width: 2,
+                    ),
+                  ),
+                  errorBorder:
+                      UnderlineInputBorder(
+                    borderSide: BorderSide(
+                      color: Colors.red,
+                    ),
+                  ),
+                  focusedErrorBorder:
+                      UnderlineInputBorder(
+                    borderSide: BorderSide(
+                      color: Colors.red,
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
 
   @override
-  void dispose() {
-    _firstNameController.dispose();
-    _lastNameController.dispose();
-    _emailController.dispose();
-    _phoneController.dispose();
-    _streetController.dispose();
-    _cityController.dispose();
-    _countryController.dispose();
-    _voucherController.dispose();
+void dispose() {
+  _fullNameController.dispose();
+  _emailController.dispose();
+  _phoneController.dispose();
+  _suburbController.dispose();
+  _postcodeController.dispose();
+  _deliveryAddressController.dispose();
+  _voucherController.dispose();
 
-    super.dispose();
-  }
+  super.dispose();
+}
 
   @override
   Widget build(BuildContext context) {
@@ -536,79 +891,115 @@ class _CheckOutScreenState
                           'Personal Details',
                           style: TextStyle(
                             fontSize: 18,
-                            fontWeight:
-                                FontWeight.bold,
-                            color:
-                                AppColors.textDark,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
                           ),
                         ),
+
                         const SizedBox(height: 12),
 
                         _input(
-                          label: 'First Name',
-                          placeholder: 'John',
-                          controller:
-                              _firstNameController,
+                          label: 'Full Name',
+                          placeholder: 'Enter your full name',
+                          controller: _fullNameController,
+                          keyboardType: TextInputType.name,
                         ),
-                        _input(
-                          label: 'Last Name',
-                          placeholder: 'Doe',
-                          controller:
-                              _lastNameController,
-                        ),
+
                         _input(
                           label: 'Email',
-                          placeholder:
-                              'youremail@example.com',
-                          controller:
-                              _emailController,
+                          placeholder: 'youremail@example.com',
+                          controller: _emailController,
                           keyboardType:
-                              TextInputType
-                                  .emailAddress,
-                        ),
-                        _input(
-                          label: 'Phone No.',
-                          placeholder:
-                              '+977 9860000000',
-                          controller:
-                              _phoneController,
-                          keyboardType:
-                              TextInputType.phone,
+                              TextInputType.emailAddress,
+                          validator: (value) {
+                            final email = value?.trim() ?? '';
+
+                            if (email.isEmpty) {
+                              return 'Email is required';
+                            }
+
+                            final emailPattern = RegExp(
+                              r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                            );
+
+                            if (!emailPattern.hasMatch(email)) {
+                              return 'Enter a valid email address';
+                            }
+
+                            return null;
+                          },
                         ),
 
-                        const SizedBox(height: 10),
+                        _australianPhoneField(),
 
-                        const Text(
-                          'Address',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight:
-                                FontWeight.bold,
-                            color:
-                                AppColors.textDark,
-                          ),
-                        ),
                         const SizedBox(height: 12),
 
+                        const Text(
+                          'Delivery Information',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.textDark,
+                          ),
+                        ),
+
+                        const SizedBox(height: 12),
+
+                        _fixedCountryField(),
+
+                        SearchableStateDropdown(
+                          country: _deliveryCountry,
+                          initialState: _deliveryState,
+                          onChanged: (state) {
+                            setState(() {
+                              _deliveryState = state;
+                            });
+                          },
+                        ),
+
+                        const SizedBox(height: 16),
+
                         _input(
-                          label: 'Street Address',
+                          label: 'Suburb',
+                          placeholder: 'Enter your suburb',
+                          controller: _suburbController,
+                        ),
+
+                        _input(
+                          label: 'Postcode',
+                          placeholder: 'Enter postcode',
+                          controller: _postcodeController,
+                          keyboardType: TextInputType.number,
+                          maxLength: 4,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(4),
+                          ],
+                          validator: (value) {
+                            final postcode = value?.trim() ?? '';
+
+                            if (postcode.isEmpty) {
+                              return 'Postcode is required';
+                            }
+
+                            if (!RegExp(r'^\d{4}$')
+                                .hasMatch(postcode)) {
+                              return 'Australian postcode must contain 4 digits';
+                            }
+
+                            return null;
+                          },
+                        ),
+
+                        _input(
+                          label: 'Delivery Address',
                           placeholder:
-                              'Street and number',
+                              'House number and street address',
                           controller:
-                              _streetController,
+                              _deliveryAddressController,
                         ),
-                        _input(
-                          label: 'City',
-                          placeholder: 'City',
-                          controller:
-                              _cityController,
-                        ),
-                        _input(
-                          label: 'Country',
-                          placeholder: 'Country',
-                          controller:
-                              _countryController,
-                        ),
+
+                        const SizedBox(height: 12),
 
                         Row(
                           children: [
@@ -715,7 +1106,8 @@ class _CheckOutScreenState
                           child:
                               ElevatedButton.icon(
                             onPressed:
-                                _checkoutItems.isEmpty
+                            _checkoutItems.isEmpty ||
+                                    _processingPayment
                                     ? null
                                     : _proceedToPay,
                             style:

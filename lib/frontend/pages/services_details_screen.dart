@@ -168,6 +168,8 @@ class _ServicesDetailsScreenState extends State<ServicesDetailsScreen> {
               image: data['image'] ?? '',
               title: data['title'] ?? '',
               subtitle: data['sub_title'] ?? '',
+              shareUrl:
+                'https://meroguru.com/service-detail/${service?['slug']}',
             ),
 
             const SizedBox(height: 24),

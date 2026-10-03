@@ -1,16 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ServiceHeaderWidget extends StatelessWidget {
   final String image;
   final String title;
   final String subtitle;
+  final String shareUrl;
 
   const ServiceHeaderWidget({
     super.key,
     required this.image,
     required this.title,
     required this.subtitle,
+    required this.shareUrl,
   });
+
+  Future<void> _shareService() async {
+    final link = shareUrl.trim();
+
+    if (link.isEmpty) return;
+
+    await Share.share(
+      '$title\n$link',
+      subject: title,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +46,8 @@ class ServiceHeaderWidget extends StatelessWidget {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.1),
+                      color: Colors.black
+                          .withOpacity(0.1),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -41,33 +56,48 @@ class ServiceHeaderWidget extends StatelessWidget {
                 child: ClipOval(
                   child: Image.network(
                     image,
+                    width: 130,
+                    height: 130,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) {
-                      return const Icon(
-                        Icons.business,
-                        size: 60,
-                        color: Colors.white,
+                    errorBuilder: (
+                      context,
+                      error,
+                      stackTrace,
+                    ) {
+                      return const Center(
+                        child: Icon(
+                          Icons.business,
+                          size: 60,
+                          color: Colors.white,
+                        ),
                       );
                     },
                   ),
                 ),
               ),
+
               CircleAvatar(
                 radius: 18,
                 backgroundColor: Colors.white,
                 child: IconButton(
+                  padding: EdgeInsets.zero,
+                  onPressed:
+                      shareUrl.trim().isEmpty
+                          ? null
+                          : _shareService,
                   icon: const Icon(
                     Icons.share,
                     size: 16,
                     color: Color(0xFFB33A0F),
                   ),
-                  onPressed: () {},
                 ),
               ),
             ],
           ),
         ),
+
         const SizedBox(height: 16),
+
         Text(
           title,
           textAlign: TextAlign.center,
@@ -76,7 +106,9 @@ class ServiceHeaderWidget extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        if (subtitle.isNotEmpty)
+
+        if (subtitle.isNotEmpty) ...[
+          const SizedBox(height: 4),
           Text(
             subtitle,
             textAlign: TextAlign.center,
@@ -86,6 +118,7 @@ class ServiceHeaderWidget extends StatelessWidget {
               fontStyle: FontStyle.italic,
             ),
           ),
+        ],
       ],
     );
   }

@@ -227,4 +227,49 @@ Future<dynamic> clearCart() async {
     requireAuth: true,
   );
 }
+
+
+Future<Map<String, dynamic>> createCheckout({
+  required String receiverName,
+  required String receiverEmail,
+  required String receiverPhone,
+  required String address,
+  required String country,
+  String? state,
+  required String suburb,
+  required String postCode,
+  String? couponCode,
+}) async {
+  final body = <String, dynamic>{
+    'receiver_name': receiverName.trim(),
+    'receiver_email': receiverEmail.trim(),
+    'receiver_phone': receiverPhone.trim(),
+    'address': address.trim(),
+    'country': country.trim(),
+    'state': state?.trim(),
+    'suburb': suburb.trim(),
+    'post_code': postCode.trim(),
+  };
+
+  if (couponCode != null &&
+      couponCode.trim().isNotEmpty) {
+    body['coupon_code'] = couponCode.trim();
+  }
+
+  final response = await _client.post(
+    'ecommerce/checkout',
+    body,
+    requireAuth: true,
+  );
+
+  if (response is! Map) {
+    throw Exception(
+      'Invalid checkout response.',
+    );
+  }
+
+  return Map<String, dynamic>.from(
+    response,
+  );
+}
 }

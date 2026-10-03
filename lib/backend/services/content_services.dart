@@ -7,22 +7,113 @@ import 'package:flutter/foundation.dart';
 class ContentService {
   final ApiClient _client = ApiClient();
 
-  Future<List<dynamic>> fetchAllGurus() async {
-  try {
-    final response = await _client.get('guru-list');
+//   Future<List<dynamic>> fetchAllGurus() async {
+//   try {
+//     final response = await _client.get('guru-list');
 
-    final data = List<dynamic>.from(response);
+//     final data = List<dynamic>.from(response);
+//     debugPrint('GET GURUS RESPONSE: $response');
+
+//     await CacheService.save(
+//       CacheKeys.gurus,
+//       data.take(20).toList(),
+//     );
+//   debugPrint('GET GURUS RESPONSE: $response');
+//     return data;
+//   } catch (e) {
+//     return CacheService.getList(
+//       CacheKeys.gurus,
+//     );
+//   }
+// }
+Future<List<dynamic>> fetchAllGurus({
+  String? state,
+  String? suburb,
+}) async {
+  try {
+    final queryParameters = <String, String>{};
+
+    if (state != null &&
+        state.trim().isNotEmpty) {
+      queryParameters['state'] = state.trim();
+    }
+
+    if (suburb != null &&
+        suburb.trim().isNotEmpty) {
+      queryParameters['suburb'] =
+          suburb.trim();
+    }
+
+    final endpoint = Uri(
+      path: 'guru-list',
+      queryParameters:
+          queryParameters.isEmpty
+              ? null
+              : queryParameters,
+    ).toString();
+
+    debugPrint(
+      'GET GURUS ENDPOINT: $endpoint',
+    );
+
+    final response =
+        await _client.get(endpoint);
+
+    debugPrint(
+      'GET GURUS RESPONSE: $response',
+    );
+
+    if (response is! Map) {
+      throw const FormatException(
+        'Guru response is not an object.',
+      );
+    }
+
+    final rawUsers = response['user'];
+
+    if (rawUsers is! List) {
+      throw const FormatException(
+        'Guru response does not contain a user list.',
+      );
+    }
+
+    final gurus = rawUsers
+        .map<Map<String, dynamic>>(
+          (item) =>
+              Map<String, dynamic>.from(
+            item as Map,
+          ),
+        )
+        .toList();
 
     await CacheService.save(
       CacheKeys.gurus,
-      data.take(20).toList(),
+      gurus.take(20).toList(),
     );
-  debugPrint('GET GURUS RESPONSE: $response');
-    return data;
-  } catch (e) {
-    return CacheService.getList(
+
+    debugPrint(
+      'TOTAL GURUS: ${gurus.length}',
+    );
+
+    return gurus;
+  } catch (error, stackTrace) {
+    debugPrint(
+      'FETCH GURUS ERROR: $error',
+    );
+
+    debugPrintStack(
+      stackTrace: stackTrace,
+    );
+
+    final cached = await CacheService.getList(
       CacheKeys.gurus,
     );
+
+    debugPrint(
+      'CACHED GURUS: ${cached.length}',
+    );
+
+    return cached;
   }
 }
 
@@ -478,5 +569,40 @@ Future<List<dynamic>> fetchUserBookings() async {
 }
 
 
+// ==================== PUJA MATERIALS ====================
+
+Future<List<dynamic>> fetchPujaMaterials() async {
+  try {
+    final response = await _client.get('puja-materials/list');
+
+    final data = response['data'] ?? [];
+
+    return List<dynamic>.from(data);
+  } catch (e) {
+    debugPrint('PUJA MATERIALS FETCH ERROR: $e');
+    return [];
+  }
+}
+
+Future<Map<String, dynamic>?> fetchPujaMaterialDetails(
+  String slug,
+) async {
+  try {
+    final response = await _client.get(
+      'puja-material/$slug',
+    );
+
+    final data = response['data'];
+
+    if (data == null) {
+      return null;
+    }
+
+    return Map<String, dynamic>.from(data);
+  } catch (e) {
+    debugPrint('PUJA MATERIAL DETAILS ERROR: $e');
+    return null;
+  }
+} 
 
 }

@@ -47,6 +47,8 @@ dependencies:
   intl: ^0.20.3
   syncfusion_flutter_pdfviewer: ^32.1.19
   nepali_utils: ^3.0.8
+  html: ^0.15.6
+  share_plus: ^12.0.2
 
 dev_dependencies:
   flutter_test:

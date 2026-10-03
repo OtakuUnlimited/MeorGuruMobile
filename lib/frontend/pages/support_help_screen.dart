@@ -1,145 +1,256 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_html/flutter_html.dart';
+import '../../constants.dart';
+import '../../backend/services/faq_services.dart';
+import '../components/top_nav_bar.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
+import '../../backend/services/stripe_payment_services.dart';
 
 class SupportHelpScreen extends StatefulWidget {
   const SupportHelpScreen({Key? key}) : super(key: key);
 
   @override
-  State createState() => _SupportHelpScreenState();
+  State<SupportHelpScreen> createState() => _SupportHelpScreenState();
 }
 
-class _SupportHelpScreenState extends State {
-  int _selectedDonationIndex = 2; // Default selected 50$
+class _SupportHelpScreenState extends State<SupportHelpScreen> {
+  final FaqService _faqService = FaqService();
+ // Default selected 50$
   String _selectedCountryCode = '+977';
 
-  // Service grid buttons data
-  final List<Map<String, dynamic>> _navigationServices = [
-    {
-      'title': 'Login &\nRegister',
-      'icon': Icons.logout,
-      'isHighlighted': true,
-    },
-    {
-      'title': 'Help & Support',
-      'icon': Icons.help_outline,
-      'isHighlighted': false,
-    },
-    {
-      'title': 'Online Puja',
-      'icon': Icons.auto_awesome,
-      'isHighlighted': false,
-    },
-    {
-      'title': 'Meroguru Blog',
-      'icon': Icons.article_outlined,
-      'isHighlighted': false,
-    },
-    {
-      'title': 'Event\nManagement',
-      'icon': Icons.calendar_month,
-      'isHighlighted': false,
-    },
-    {
-      'title': 'Patro or\nPanchanga',
-      'icon': Icons.calendar_today,
-      'isHighlighted': false,
-    },
-    {
-      'title': 'Auspicious\nDays',
-      'icon': Icons.star_border,
-      'isHighlighted': false,
-    },
-    {
-      'title': 'Find A Guru',
-      'icon': Icons.person_search_outlined,
-      'isHighlighted': false,
-    },
-    {
-      'title': 'Service\nProviders',
-      'icon': Icons.handyman_outlined,
-      'isHighlighted': false,
-    },
-    {
-      'title': 'Puja Materials',
-      'icon': Icons.inventory_2_outlined,
-      'isHighlighted': false,
-    },
+  bool _loadingFaqs = true;
+  int? _selectedCategoryId;
+  List<Map<String, dynamic>> _categories = [];
+  List<Map<String, dynamic>> _allFaqs = [];
+  List<Map<String, dynamic>> _displayedFaqs = [];
+  final TextEditingController _donationController =
+    TextEditingController();
+
+  final List<double> _donationAmounts = [
+  10,
+  15,
+  50,
   ];
+
+  int _selectedDonationIndex = 2;
+  bool _processingDonation = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFaqData();
+  }
+
+  double? _getDonationAmount() {
+  final customText =
+      _donationController.text.trim();
+
+  if (customText.isNotEmpty) {
+    final customAmount =
+        double.tryParse(customText);
+
+    if (customAmount != null &&
+        customAmount > 0) {
+      return customAmount;
+    }
+
+    return null;
+  }
+
+  if (_selectedDonationIndex >= 0 &&
+      _selectedDonationIndex <
+          _donationAmounts.length) {
+    return _donationAmounts[
+        _selectedDonationIndex];
+  }
+
+  return null;
+}
+
+void _showErrorMessage(String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+}
+
+void _showSuccessMessage(String message) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(
+            color: Colors.white,
+          ),
+        ),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+}
+
+Future<void> _makeDonation() async {
+  if (_processingDonation) return;
+
+  final amount = _getDonationAmount();
+
+  if (amount == null || amount < 1) {
+    _showErrorMessage(
+      'Please select or enter a valid donation amount.',
+    );
+    return;
+  }
+
+  FocusScope.of(context).unfocus();
+
+  setState(() {
+    _processingDonation = true;
+  });
+
+  try {
+    final paymentIntentId =
+        await StripePaymentService.instance
+            .makeDonation(
+      amount: amount,
+    );
+
+    if (!mounted) return;
+
+    if (paymentIntentId == null) {
+      return;
+    }
+
+    _showSuccessMessage(
+      'Thank you! Your donation was successful.',
+    );
+
+    _donationController.clear();
+
+    setState(() {
+      _selectedDonationIndex = 2;
+    });
+  } catch (error, stackTrace) {
+    debugPrint('DONATION ERROR: $error');
+    debugPrintStack(stackTrace: stackTrace);
+
+    if (!mounted) return;
+
+    _showErrorMessage(
+      error
+          .toString()
+          .replaceFirst('Exception: ', ''),
+    );
+  } finally {
+    if (mounted) {
+      setState(() {
+        _processingDonation = false;
+      });
+    }
+  }
+}
+
+@override
+void dispose() {
+  _donationController.dispose();
+  super.dispose();
+}
+
+  int _asInt(dynamic value) =>
+      int.tryParse(value?.toString() ?? '') ?? 0;
+
+  Future<void> _loadFaqData() async {
+    try {
+      final results = await Future.wait([
+        _faqService.fetchFaqCategories(),
+        _faqService.fetchFaqs(),
+      ]);
+
+      if (!mounted) return;
+
+      final categories = List<Map<String, dynamic>>.from(results[0]);
+      final faqs = List<Map<String, dynamic>>.from(results[1]);
+
+      categories.sort(
+        (a, b) => _asInt(a['position']).compareTo(_asInt(b['position'])),
+      );
+      faqs.sort(
+        (a, b) => _asInt(a['position']).compareTo(_asInt(b['position'])),
+      );
+
+      setState(() {
+        _categories = categories;
+        _allFaqs = faqs;
+        _loadingFaqs = false;
+
+        if (_categories.isNotEmpty) {
+          _selectedCategoryId = _asInt(_categories.first['id']);
+          _filterFaqs(_selectedCategoryId!, updateState: false);
+        } else {
+          _displayedFaqs = List<Map<String, dynamic>>.from(_allFaqs);
+        }
+      });
+    } catch (error, stackTrace) {
+      debugPrint('FAQ PAGE ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (!mounted) return;
+      setState(() => _loadingFaqs = false);
+    }
+  }
+
+  void _filterFaqs(int categoryId, {bool updateState = true}) {
+    final filtered = _allFaqs.where((faq) {
+      return _asInt(faq['category_id']) == categoryId;
+    }).toList();
+
+    if (updateState) {
+      setState(() {
+        _selectedCategoryId = categoryId;
+        _displayedFaqs = filtered;
+      });
+    } else {
+      _displayedFaqs = filtered;
+    }
+  }
+
+  IconData _categoryIcon(String slug) {
+    switch (slug) {
+      case 'general-questions':
+        return Icons.logout;
+      case 'login-issues':
+        return Icons.help_outline;
+      case 'online-puja':
+        return Icons.auto_awesome;
+      case 'astrology-services':
+        return Icons.star_outline;
+      default:
+        return Icons.help_outline;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9FAFB),
       // App Bar Header
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.black87),
-          onPressed: () {},
-        ),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 30,
-              height: 30,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFFA6400),
-              ),
-              child: const Icon(Icons.brightness_7, color: Colors.white, size: 18),
-            ),
-            const SizedBox(width: 6),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Text(
-                  'Mero Guru',
-                  style: TextStyle(
-                    color: Color(0xFFFA6400),
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                Text(
-                  'meroguru.com',
-                  style: TextStyle(color: Colors.grey, fontSize: 8),
-                ),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              IconButton(
-                icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black87),
-                onPressed: () {},
-              ),
-              Positioned(
-                top: 8,
-                right: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFA6400),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Text(
-                    '1',
-                    style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          IconButton(
-            icon: const Icon(Icons.account_circle_outlined, color: Colors.black87, size: 26),
-            onPressed: () {},
-          ),
-        ],
+      appBar: CustomTopNavBar(
+        title: 'Mero Guru',
+        style: NavBarStyle.BrandedLight,
+        showBack: true,
+        showCart: true,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -158,85 +269,104 @@ class _SupportHelpScreenState extends State {
             const SizedBox(height: 16),
 
             // Service Navigation Button Grid
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: _navigationServices.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 2.3,
-              ),
-              itemBuilder: (context, index) {
-                final item = _navigationServices[index];
-                final isHighlighted = item['isHighlighted'] as bool;
+            if (_loadingFaqs)
+              const SizedBox(
+                height: 120,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _categories.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 2.3,
+                ),
+                itemBuilder: (context, index) {
+                  final category = _categories[index];
+                  final categoryId = _asInt(category['id']);
+                  final slug = category['slug']?.toString() ?? '';
+                  final isHighlighted = _selectedCategoryId == categoryId;
 
-                return Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: isHighlighted ? const Color(0xFFA13E00) : Colors.white,
+                  return InkWell(
+                    onTap: () => _filterFaqs(categoryId),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isHighlighted ? Colors.transparent : Colors.grey.shade200,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        item['icon'] as IconData,
-                        color: isHighlighted ? Colors.white : const Color(0xFFA13E00),
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          item['title'] as String,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isHighlighted ? Colors.white : Colors.black87,
-                            height: 1.2,
-                          ),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: isHighlighted
+                            ? const Color(0xFFA13E00)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isHighlighted
+                              ? Colors.transparent
+                              : Colors.grey.shade200,
                         ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.02),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            _categoryIcon(slug),
+                            color: isHighlighted
+                                ? Colors.white
+                                : const Color(0xFFA13E00),
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              category['title']?.toString() ?? '',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: isHighlighted
+                                    ? Colors.white
+                                    : Colors.black87,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
 
             const SizedBox(height: 24),
 
             // Accordion FAQs Section
-            _buildFaqItem(
-              title: 'Do I need to register or log in to use Sanctuary?',
-              content:
-                  'While you can browse rituals and explore the community, an account is required to book personalized Puja services and maintain your spiritual journal history.',
-              initiallyExpanded: true,
-            ),
-            _buildFaqItem(
-              title: 'How do I track my scheduled Rituals?',
-              content: 'You can track all upcoming and past booked rituals directly from your account profile tab under "My Bookings".',
-              initiallyExpanded: false,
-            ),
-            _buildFaqItem(
-              title: 'Are the Astrologers verified?',
-              content: 'Yes, all our pandits and astrologers undergo background and certification verification processes before joining MeroGuru.',
-              initiallyExpanded: false,
-            ),
-            _buildFaqItem(
-              title: 'What payment methods are supported?',
-              content: 'We accept major credit/debit cards, digital wallets, and local mobile payment portals.',
-              initiallyExpanded: false,
-            ),
+            if (!_loadingFaqs && _displayedFaqs.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Center(
+                  child: Text(
+                    'No frequently asked questions found in this category.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                ),
+              )
+            else
+              ...List.generate(_displayedFaqs.length, (index) {
+                final faq = _displayedFaqs[index];
+                return _buildFaqItem(
+                  title: faq['question']?.toString() ?? '',
+                  content: faq['answer']?.toString() ?? '',
+                  initiallyExpanded: index == 0,
+                );
+              }),
 
             const SizedBox(height: 20),
 
@@ -268,50 +398,256 @@ class _SupportHelpScreenState extends State {
                   const SizedBox(height: 16),
 
                   // Preset Amount Selection Buttons
-                  Row(
-                    children: [
-                      _buildDonationButton(0, '10\$'),
-                      const SizedBox(width: 8),
-                      _buildDonationButton(1, '15\$'),
-                      const SizedBox(width: 8),
-                      _buildDonationButton(2, '50\$'),
-                    ],
+                 Container(
+  width: double.infinity,
+  padding: const EdgeInsets.all(20),
+  decoration: BoxDecoration(
+    color: Colors.white,
+    borderRadius: BorderRadius.circular(16),
+    border: Border.all(
+      color: Colors.grey.shade200,
+    ),
+    boxShadow: [
+      BoxShadow(
+        color: Colors.black.withOpacity(0.05),
+        blurRadius: 10,
+        offset: const Offset(0, 4),
+      ),
+    ],
+  ),
+  child: Column(
+    crossAxisAlignment:
+        CrossAxisAlignment.start,
+    children: [
+      const Text(
+        'DONATE',
+        style: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+
+      const SizedBox(height: 6),
+
+      Text(
+        'Support Mero Guru by making a donation.',
+        style: TextStyle(
+          fontSize: 14,
+          color: Colors.grey.shade600,
+        ),
+      ),
+
+      const SizedBox(height: 20),
+
+      Row(
+        children: List.generate(
+          _donationAmounts.length,
+          (index) {
+            final amount =
+                _donationAmounts[index];
+
+            final selected =
+                _selectedDonationIndex ==
+                    index;
+
+            return Expanded(
+              child: Padding(
+                padding: EdgeInsets.only(
+                  right: index <
+                          _donationAmounts
+                                  .length -
+                              1
+                      ? 8
+                      : 0,
+                ),
+                child: OutlinedButton(
+                  onPressed:
+                      _processingDonation
+                          ? null
+                          : () {
+                              setState(() {
+                                _selectedDonationIndex =
+                                    index;
+
+                                _donationController
+                                    .clear();
+                              });
+                            },
+                  style:
+                      OutlinedButton.styleFrom(
+                    backgroundColor: selected
+                        ? const Color(
+                            0xFFFF5A00,
+                          )
+                        : Colors.white,
+                    foregroundColor: selected
+                        ? Colors.white
+                        : const Color(
+                            0xFFFF5A00,
+                          ),
+                    side: const BorderSide(
+                      color: Color(
+                        0xFFFF5A00,
+                      ),
+                    ),
+                    padding:
+                        const EdgeInsets.symmetric(
+                      vertical: 14,
+                    ),
+                    shape:
+                        RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(
+                        10,
+                      ),
+                    ),
                   ),
-                  const SizedBox(height: 12),
+                  child: Text(
+                    '\$${amount.toStringAsFixed(0)}',
+                    style: const TextStyle(
+                      fontWeight:
+                          FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+
+      const SizedBox(height: 16),
+
+      TextField(
+        controller: _donationController,
+        enabled: !_processingDonation,
+        keyboardType:
+            const TextInputType.numberWithOptions(
+          decimal: true,
+        ),
+        textInputAction:
+            TextInputAction.done,
+        inputFormatters: [
+          FilteringTextInputFormatter.allow(
+            RegExp(
+              r'^\d{0,6}(\.\d{0,2})?$',
+            ),
+          ),
+        ],
+        onChanged: (value) {
+          final hasCustomAmount =
+              value.trim().isNotEmpty;
+
+          if (hasCustomAmount &&
+              _selectedDonationIndex != -1) {
+            setState(() {
+              _selectedDonationIndex = -1;
+            });
+          }
+        },
+        onSubmitted: (_) {
+          if (!_processingDonation) {
+            _makeDonation();
+          }
+        },
+        decoration: InputDecoration(
+          labelText: 'Custom amount',
+          hintText: 'Enter amount',
+          prefixText: '\$ ',
+          suffixText: 'AUD',
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding:
+              const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+          border: OutlineInputBorder(
+            borderRadius:
+                BorderRadius.circular(10),
+          ),
+          enabledBorder:
+              OutlineInputBorder(
+            borderRadius:
+                BorderRadius.circular(10),
+            borderSide: BorderSide(
+              color: Colors.grey.shade300,
+            ),
+          ),
+          focusedBorder:
+              OutlineInputBorder(
+            borderRadius:
+                BorderRadius.circular(10),
+            borderSide: const BorderSide(
+              color: Color(0xFFFF5A00),
+              width: 1.5,
+            ),
+          ),
+        ),
+      ),
+
+      const SizedBox(height: 8),
+
+      Text(
+        _selectedDonationIndex >= 0
+            ? 'Selected: \$${_donationAmounts[_selectedDonationIndex].toStringAsFixed(2)} AUD'
+            : 'Custom donation amount',
+        style: TextStyle(
+          color: Colors.grey.shade600,
+          fontSize: 12,
+        ),
+      ),
+
+      const SizedBox(height: 18),
+
+      SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton(
+          onPressed: _processingDonation
+              ? null
+              : _makeDonation,
+          style: ElevatedButton.styleFrom(
+            backgroundColor:
+                const Color(0xFFFF5A00),
+            foregroundColor: Colors.white,
+            disabledBackgroundColor:
+                const Color(0xFFFFA675),
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius:
+                  BorderRadius.circular(10),
+            ),
+          ),
+          child: _processingDonation
+              ? const SizedBox(
+                  width: 23,
+                  height: 23,
+                  child:
+                      CircularProgressIndicator(
+                    strokeWidth: 2.4,
+                    color: Colors.white,
+                  ),
+                )
+              : const Text(
+                  'DONATE',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight:
+                        FontWeight.bold,
+                  ),
+                ),
+        ),
+      ),
+    ],
+  ),
+)
 
                   // Custom Amount Input
-                  TextField(
-                    decoration: InputDecoration(
-                      hintText: 'Enter Amount',
-                      hintStyle: const TextStyle(fontSize: 13, color: Colors.grey),
-                      filled: true,
-                      fillColor: const Color(0xFFF3F4F6),
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
+                  
 
                   // Donate Button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFC62828),
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      onPressed: () {},
-                      child: const Text(
-                        'DONATE',
-                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
-                      ),
-                    ),
-                  ),
+          
                 ],
               ),
             ),
@@ -509,9 +845,28 @@ class _SupportHelpScreenState extends State {
           children: [
             Padding(
               padding: const EdgeInsets.only(left: 16, right: 16, bottom: 14),
-              child: Text(
-                content,
-                style: const TextStyle(fontSize: 12, color: Colors.black54, height: 1.4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Html(
+                  data: content,
+                  style: {
+                    'body': Style(
+                      margin: Margins.zero,
+                      padding: HtmlPaddings.zero,
+                      color: Colors.black54,
+                      fontSize: FontSize(12),
+                      lineHeight: const LineHeight(1.4),
+                    ),
+                    'p': Style(
+                      margin: Margins.zero,
+                      padding: HtmlPaddings.zero,
+                    ),
+                    'span': Style(
+                      color: Colors.black54,
+                      fontSize: FontSize(12),
+                    ),
+                  },
+                ),
               ),
             ),
           ],

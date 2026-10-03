@@ -347,25 +347,48 @@ Future<void> _saveProfileWithValidation() async {
   }
 }
   
-  String? _getAvatarUrl(dynamic avatar) {
-  if (avatar == null || avatar.toString().isEmpty) {
-    return null;
+ String? _getAvatarUrl(dynamic avatar) {
+  if (avatar == null) return null;
+
+  String value = avatar.toString().trim();
+
+  if (value.isEmpty) return null;
+
+  // Convert local Laravel addresses for Android emulator.
+  value = value
+      .replaceFirst(
+        'http://127.0.0.1:8000',
+        'http://10.0.2.2:8000',
+      )
+      .replaceFirst(
+        'http://localhost:8000',
+        'http://10.0.2.2:8000',
+      );
+
+  // The API already returned a complete URL.
+  if (value.startsWith('http://') ||
+      value.startsWith('https://')) {
+    return Uri.encodeFull(value);
   }
 
-  String avatarName = avatar.toString();
+  // Remove accidental slashes from the filename.
+  value = value.replaceFirst(
+    RegExp(r'^/+'),
+    '',
+  );
 
-  if (avatarName.startsWith('http')) {
-    return avatarName;
-  }
-
-  if (avatarName.contains('127.0.0.1:8000')) {
-    avatarName = avatarName.replaceFirst(
-      '127.0.0.1:8000',
-      '10.0.2.2:8000',
+  // If the API returns an uploads path rather than only a filename.
+  if (value.startsWith('uploads/')) {
+    return Uri.encodeFull(
+      'http://10.0.2.2:8000/$value',
     );
   }
 
-  return 'http://10.0.2.2:8000/uploads/users/$avatarName';
+  // API returned only the avatar filename.
+  return Uri.http(
+    '10.0.2.2:8000',
+    '/uploads/user_images/$value',
+  ).toString();
 }
 
    @override

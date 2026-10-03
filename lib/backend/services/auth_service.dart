@@ -233,7 +233,7 @@ Future<dynamic> resetPassword({
     {
       'email': email,
       'otp': otp,
-      'new_password': newPassword,
+      'password': newPassword,
     },
   );
 

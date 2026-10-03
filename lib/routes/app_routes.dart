@@ -24,12 +24,15 @@
   import '../frontend/pages/auspicious_calender.dart';
 
 
+  import '../frontend/pages/askMeroGuru_screen.dart';
+
   // New E-Commerce Page Imports
   import '../frontend/pages/shop_screen.dart';
   import '../frontend/pages/item_detail_screen.dart';
   import '../frontend/pages/cart_screen.dart';
   import '../frontend/pages/checkout_screen.dart';
   import '../frontend/pages/puja_materials_screen.dart';
+  import '../frontend/pages/puja_material_detail_screen.dart';
 
   import '../frontend/pages/booking_screen.dart';
 
@@ -58,6 +61,8 @@
     static const blogs = '/blogs';
     static const blogDetails = '/blog-details';
 
+    static const askMeroGuru = '/askmeroguru';
+
     static const patro = '/patro';
     static const auspiciousCalender = '/auspicious-calender';
 
@@ -73,7 +78,7 @@
     static const cart = '/cart';
     static const checkout = '/checkout';
     static const pujaMaterials = '/puja-materials';
-
+    static const pujaMaterialDetail = '/puja-material-detail';
     static const serviceDetails = '/service-details';
     static const services = '/services';
     static const String bookings = '/bookings';
@@ -181,13 +186,19 @@
           ),
         );
 
-        case forgotPassword:
-    return MaterialPageRoute(
-      builder: (_) =>
-          const ForgotPasswordScreen(),
-      settings: settings,
-    );
+      case forgotPassword:
+          return MaterialPageRoute(
+            builder: (_) =>
+                const ForgotPasswordScreen(),
+            settings: settings,
+          );
+      case pujaMaterialDetail:
+        final slug = settings.arguments as String;
 
+        return MaterialPageRoute(
+          builder: (_) => PujaMaterialDetailScreen(slug: slug),
+        );
+    
 
       default:
         return null;
@@ -208,6 +219,7 @@
       guru: (_) => const FindGurusScreen(),
       astrology: (_) => const AstrologyScreen(),
       eventPackages: (_) => const EventPackagesScreen(),
+      askMeroGuru: (_) => const AskMeroGuruScreen(),
       // Services Detail Route
       bookings: (_) => const BookingsScreen(),
       onlinePuja: (_) => const OnlinePujaScreen(),
@@ -217,5 +229,6 @@
       cart: (_) => const CartScreen(),
       checkout: (_) => const CheckOutScreen(),
       pujaMaterials: (_) => const PujaMaterialsScreen(),
+      
     };
   }

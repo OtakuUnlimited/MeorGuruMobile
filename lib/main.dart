@@ -13,7 +13,7 @@ Future<void> main() async {
   // Stripe publishable key.
   // A pk_test key is safe for client-side use.
   stripe.Stripe.publishableKey =
-      'pk_test_51S00QKJlpluk7DSJU4VqhUGOrlt0hznAS3atQjUhPkjllkvvWEIBOYRV8dWoM9N8YW1lo4jqYZqNexCtIdMjeQOY00LA99ZWHJ';
+      'pk_test_51NzwtfGMKZucybpY6Eoc1imXAcgK7bje4CKl8flvauEHMcbAIEdUzsZ1AI5gWECpBgnyiVL5dbtcmo4E4REaOUU900Xyux5H9o';
 
   stripe.Stripe.urlScheme = 'meroguru';
 

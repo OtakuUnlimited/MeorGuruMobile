@@ -150,6 +150,19 @@ class HamburgerOverlay extends StatelessWidget {
 
                               _buildQuickLinkItem(
                                 context,
+                                Icons.support_agent,
+                                "Ask\nMeroGuru",
+                                () {
+                                  Navigator.pop(context);
+                                  Navigator.pushNamed(
+                                    context,
+                                    AppRoutes.askMeroGuru,
+                                  );
+                                },
+                              ),
+
+                              _buildQuickLinkItem(
+                                context,
                                 Icons.notifications_none,
                                 "Online\nPuja",
                                 () {

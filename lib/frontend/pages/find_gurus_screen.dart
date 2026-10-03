@@ -20,6 +20,7 @@ class _FindGurusScreenState extends State<FindGurusScreen> {
   void initState() {
     super.initState();
     gurusFuture = ContentService().fetchAllGurus();
+    debugPrint('GET GURUS RESPONSE');
   }
 
   @override
