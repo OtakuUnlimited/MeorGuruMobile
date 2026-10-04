@@ -8,144 +8,217 @@ class ServiceCard extends StatelessWidget {
   final VoidCallback onBookNow;
 
   const ServiceCard({
-    Key? key,
+    super.key,
     required this.devanagariTitle,
     required this.englishTitle,
     required this.price,
     required this.imageUrl,
     required this.onBookNow,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius:
+            BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color:
+                Colors.black.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(10),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            /// Service Image
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 6,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: ClipOval(
-                child: Image.network(
-                  imageUrl,
-                  fit: BoxFit.cover,
-                  loadingBuilder:
-                      (context, child, loadingProgress) {
-                    if (loadingProgress == null) return child;
+            /*
+             * Flexible image area prevents vertical
+             * overflow on smaller iPhones.
+             */
+            Expanded(
+              child: Center(
+                child: LayoutBuilder(
+                  builder: (
+                    context,
+                    constraints,
+                  ) {
+                    final size =
+                        constraints.maxHeight
+                            .clamp(65.0, 100.0);
 
                     return Container(
-                      color: Colors.grey.shade100,
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
+                      width: size,
+                      height: size,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black
+                                .withOpacity(0.1),
+                            blurRadius: 6,
+                            offset:
+                                const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: ClipOval(
+                        child: Image.network(
+                          imageUrl,
+                          width: size,
+                          height: size,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (
+                            context,
+                            child,
+                            loadingProgress,
+                          ) {
+                            if (loadingProgress ==
+                                null) {
+                              return child;
+                            }
+
+                            return Container(
+                              color: Colors
+                                  .grey.shade100,
+                              alignment:
+                                  Alignment.center,
+                              child:
+                                  const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child:
+                                    CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              ),
+                            );
+                          },
+                          errorBuilder: (
+                            context,
+                            error,
+                            stackTrace,
+                          ) {
+                            return Container(
+                              color: Colors
+                                  .grey.shade200,
+                              alignment:
+                                  Alignment.center,
+                              child: const Icon(
+                                Icons
+                                    .image_not_supported,
+                                color: Colors.grey,
+                                size: 36,
+                              ),
+                            );
+                          },
                         ),
                       ),
                     );
                   },
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      color: Colors.grey.shade200,
-                      child: const Icon(
-                        Icons.image_not_supported,
-                        color: Colors.grey,
-                        size: 40,
-                      ),
-                    );
-                  },
                 ),
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 7),
 
-            /// Titles
-            Column(
-              children: [
-                Text(
-                  devanagariTitle,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFC62828),
-                  ),
-                ),
-
-                const SizedBox(height: 2),
-
-                Text(
-                  englishTitle,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
+            /*
+             * Devanagari title
+             */
+            Text(
+              devanagariTitle,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 16,
+                height: 1.15,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFFC62828),
+              ),
             ),
 
-            const SizedBox(height: 4),
+            const SizedBox(height: 3),
 
-            /// Price
+            /*
+             * English title
+             */
+            Text(
+              englishTitle,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.15,
+                color: Colors.grey.shade600,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+
+            const SizedBox(height: 5),
+
+            /*
+             * Price
+             */
             Text(
               price,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                fontSize: 15,
+                fontSize: 14,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFFE0531A),
               ),
             ),
 
-            const SizedBox(height: 8),
+            const SizedBox(height: 7),
 
-            /// Book Button
+            /*
+             * Responsive Book Now button
+             */
             SizedBox(
               width: double.infinity,
               height: 38,
               child: ElevatedButton(
+                onPressed: onBookNow,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFA6400),
+                  backgroundColor:
+                      const Color(0xFFFA6400),
+                  foregroundColor: Colors.white,
+                  disabledForegroundColor:
+                      Colors.white,
                   elevation: 0,
+                  padding:
+                      const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 6,
+                  ),
+                  minimumSize:
+                      const Size(0, 38),
+                  tapTargetSize:
+                      MaterialTapTargetSize
+                          .shrinkWrap,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius:
+                        BorderRadius.circular(8),
                   ),
                 ),
-                onPressed: onBookNow,
-                child: const Text(
-                  'Book Now',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
+                child: const FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    'Book Now',
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight:
+                          FontWeight.bold,
+                    ),
                   ),
                 ),
               ),

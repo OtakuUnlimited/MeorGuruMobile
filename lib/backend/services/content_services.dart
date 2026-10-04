@@ -117,6 +117,74 @@ Future<List<dynamic>> fetchAllGurus({
   }
 }
 
+Future<Map<String, dynamic>> fetchGuruDirectory({
+  String? state,
+  String? suburb,
+}) async {
+  final parameters = <String, String>{};
+
+  if (state != null &&
+      state.trim().isNotEmpty) {
+    parameters['state'] = state.trim();
+  }
+
+  if (suburb != null &&
+      suburb.trim().isNotEmpty) {
+    parameters['suburb'] = suburb.trim();
+  }
+
+  final endpoint = Uri(
+    path: 'guru-list',
+    queryParameters:
+        parameters.isEmpty ? null : parameters,
+  ).toString();
+
+  final response = await _client.get(endpoint);
+
+  debugPrint(
+    'GURU DIRECTORY ENDPOINT: $endpoint',
+  );
+
+  debugPrint(
+    'GURU DIRECTORY RESPONSE: $response',
+  );
+
+  if (response is! Map) {
+    throw const FormatException(
+      'Invalid guru directory response.',
+    );
+  }
+
+  final rawUsers = response['user'];
+  final rawStates = response['states'];
+  final rawSuburbs = response['suburbs'];
+
+  return {
+    'users': rawUsers is List
+        ? rawUsers
+            .map<Map<String, dynamic>>(
+              (item) =>
+                  Map<String, dynamic>.from(
+                item as Map,
+              ),
+            )
+            .toList()
+        : <Map<String, dynamic>>[],
+    'states': rawStates is List
+        ? rawStates
+            .map((item) => item.toString())
+            .where((item) => item.isNotEmpty)
+            .toList()
+        : <String>[],
+    'suburbs': rawSuburbs is List
+        ? rawSuburbs
+            .map((item) => item.toString())
+            .where((item) => item.isNotEmpty)
+            .toList()
+        : <String>[],
+  };
+}
+
  Future<List<dynamic>> fetchOnlinePujas() async {
   try {
     final response =
